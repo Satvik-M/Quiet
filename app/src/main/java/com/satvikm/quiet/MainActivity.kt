@@ -8,10 +8,14 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -26,9 +30,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.satvikm.quiet.domain.model.LaunchableApp
+import com.satvikm.quiet.ui.home.HomeViewModel
 import com.satvikm.quiet.ui.theme.QuietBlack
 import com.satvikm.quiet.ui.theme.QuietTheme
 import com.satvikm.quiet.util.createChangeDefaultLauncherIntent
@@ -111,6 +119,27 @@ private fun HomeScreen() {
                     Text("Set as default")
                 }
             }
+        } else {
+            // A debug listing for M3; the real home surface with favorites
+            // and gestures lands in M4/M5.
+            DebugAppList()
+        }
+    }
+}
+
+@Composable
+private fun DebugAppList(viewModel: HomeViewModel = hiltViewModel()) {
+    val apps by viewModel.apps.collectAsStateWithLifecycle()
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        items(apps, key = { "${it.componentName}/${it.userHandle}" }) { app: LaunchableApp ->
+            Text(
+                text = app.label,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { viewModel.launch(app) }
+                    .padding(horizontal = 24.dp, vertical = 12.dp),
+            )
         }
     }
 }
