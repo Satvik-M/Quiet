@@ -6,6 +6,7 @@ import android.os.UserManager
 import androidx.room.Room
 import com.satvikm.quiet.data.apps.AppDao
 import com.satvikm.quiet.data.apps.AppDatabase
+import com.satvikm.quiet.data.apps.AppOverrideDao
 import com.satvikm.quiet.data.favorites.FavoriteDao
 import dagger.Module
 import dagger.Provides
@@ -44,4 +45,7 @@ object AppModule {
 
     @Provides
     fun provideFavoriteDao(database: AppDatabase): FavoriteDao = database.favoriteDao()
+
+    @Provides
+    fun provideAppOverrideDao(database: AppDatabase): AppOverrideDao = database.appOverrideDao()
 }

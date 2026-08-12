@@ -2,6 +2,7 @@ package com.satvikm.quiet.ui.drawer
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.satvikm.quiet.data.apps.AppOverridesRepository
 import com.satvikm.quiet.data.apps.AppRepository
 import com.satvikm.quiet.data.favorites.FavoritesRepository
 import com.satvikm.quiet.domain.model.LaunchableApp
@@ -15,10 +16,17 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * Typing this exactly (case-insensitive) in the drawer search reveals
+ * hidden apps. Hardcoded until M8 adds a real settings screen.
+ */
+const val REVEAL_HIDDEN_APPS_TERM = "unhide"
+
 @HiltViewModel
 class DrawerViewModel @Inject constructor(
     private val appRepository: AppRepository,
     private val favoritesRepository: FavoritesRepository,
+    private val overridesRepository: AppOverridesRepository,
 ) : ViewModel() {
 
     private val started = SharingStarted.WhileSubscribed(5_000)
@@ -32,7 +40,7 @@ class DrawerViewModel @Inject constructor(
 
     /** Ranked so prefix matches ("cal" -> Calculator, Calendar) beat substring matches. */
     val filteredApps: StateFlow<List<LaunchableApp>> = appRepository.apps
-        .combine(query) { apps, text -> rankByQuery(apps, text) }
+        .combine(query) { apps, text -> filterAndRank(apps, text) }
         .stateIn(viewModelScope, started, emptyList())
 
     fun onQueryChange(text: String) {
@@ -47,15 +55,29 @@ class DrawerViewModel @Inject constructor(
         viewModelScope.launch { favoritesRepository.toggleFavorite(app) }
     }
 
-    private fun rankByQuery(apps: List<LaunchableApp>, query: String): List<LaunchableApp> {
+    fun setHidden(app: LaunchableApp, hidden: Boolean) {
+        viewModelScope.launch { overridesRepository.setHidden(app, hidden) }
+    }
+
+    fun rename(app: LaunchableApp, newLabel: String?) {
+        viewModelScope.launch { overridesRepository.setCustomLabel(app, newLabel) }
+    }
+
+    private fun filterAndRank(apps: List<LaunchableApp>, query: String): List<LaunchableApp> {
         val trimmed = query.trim()
+
+        if (trimmed.equals(REVEAL_HIDDEN_APPS_TERM, ignoreCase = true)) {
+            return apps.filter { it.isHidden }.sortedBy { it.displayLabel.lowercase() }
+        }
+
+        val visible = apps.filterNot { it.isHidden }
         if (trimmed.isEmpty()) {
-            return apps.sortedBy { it.label.lowercase() }
+            return visible.sortedBy { it.displayLabel.lowercase() }
         }
         val q = trimmed.lowercase()
-        return apps
+        return visible
             .mapNotNull { app ->
-                val label = app.label.lowercase()
+                val label = app.displayLabel.lowercase()
                 val rank = when {
                     label == q -> 0
                     label.startsWith(q) -> 1

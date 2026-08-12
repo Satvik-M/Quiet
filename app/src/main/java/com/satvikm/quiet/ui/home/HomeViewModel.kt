@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.time.ZonedDateTime
 import javax.inject.Inject
 
@@ -21,7 +22,7 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     @ApplicationContext context: Context,
     private val appRepository: AppRepository,
-    favoritesRepository: FavoritesRepository,
+    private val favoritesRepository: FavoritesRepository,
 ) : ViewModel() {
 
     private val started = SharingStarted.WhileSubscribed(5_000)
@@ -49,5 +50,9 @@ class HomeViewModel @Inject constructor(
 
     fun launch(app: LaunchableApp) {
         appRepository.launch(app)
+    }
+
+    fun reorderFavorites(appIdsInOrder: List<String>) {
+        viewModelScope.launch { favoritesRepository.reorder(appIdsInOrder) }
     }
 }

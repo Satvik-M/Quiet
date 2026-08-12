@@ -20,6 +20,10 @@ class FavoritesRepository @Inject constructor(
         }
     }
 
+    suspend fun reorder(appIdsInOrder: List<String>) {
+        favoriteDao.reorder(appIdsInOrder)
+    }
+
     companion object {
         /** Tier 0 spec: 1–8 favorites shown as plain text lines on home. */
         const val MAX_FAVORITES = 8

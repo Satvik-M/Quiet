@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -23,4 +24,12 @@ abstract class FavoriteDao {
 
     @Query("DELETE FROM favorites WHERE appId = :appId")
     abstract suspend fun delete(appId: String)
+
+    @Query("UPDATE favorites SET position = :position WHERE appId = :appId")
+    protected abstract suspend fun updatePosition(appId: String, position: Int)
+
+    @Transaction
+    open suspend fun reorder(appIdsInOrder: List<String>) {
+        appIdsInOrder.forEachIndexed { index, appId -> updatePosition(appId, index) }
+    }
 }

@@ -1,6 +1,8 @@
 package com.satvikm.quiet.ui.drawer
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,17 +14,25 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
@@ -30,9 +40,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.satvikm.quiet.domain.model.LaunchableApp
+import com.satvikm.quiet.util.appInfoIntent
+import com.satvikm.quiet.util.requestUninstall
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DrawerScreen(viewModel: DrawerViewModel = hiltViewModel()) {
+    val context = LocalContext.current
     val query by viewModel.queryText.collectAsStateWithLifecycle()
     val apps by viewModel.filteredApps.collectAsStateWithLifecycle()
     val favoriteIds by viewModel.favoriteIds.collectAsStateWithLifecycle()
@@ -40,6 +54,9 @@ fun DrawerScreen(viewModel: DrawerViewModel = hiltViewModel()) {
 
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
+
+    var menuTarget by remember { mutableStateOf<LaunchableApp?>(null) }
+    var renameTarget by remember { mutableStateOf<LaunchableApp?>(null) }
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -75,25 +92,92 @@ fun DrawerScreen(viewModel: DrawerViewModel = hiltViewModel()) {
 
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             items(apps, key = { it.id }) { app: LaunchableApp ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { viewModel.launch(app) }
-                        .padding(horizontal = 24.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = app.label,
-                        color = onBackground,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text(
-                        text = if (app.id in favoriteIds) "★" else "☆",
-                        color = onBackground,
-                        modifier = Modifier.clickable { viewModel.toggleFavorite(app) },
-                    )
+                Box {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .combinedClickable(
+                                onClick = { viewModel.launch(app) },
+                                onLongClick = { menuTarget = app },
+                            )
+                            .padding(horizontal = 24.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(text = app.displayLabel, color = onBackground)
+                    }
+
+                    DropdownMenu(
+                        expanded = menuTarget?.id == app.id,
+                        onDismissRequest = { menuTarget = null },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(if (app.id in favoriteIds) "Remove from favorites" else "Pin to favorites") },
+                            onClick = {
+                                viewModel.toggleFavorite(app)
+                                menuTarget = null
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Rename") },
+                            onClick = {
+                                menuTarget = null
+                                renameTarget = app
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(if (app.isHidden) "Unhide" else "Hide") },
+                            onClick = {
+                                viewModel.setHidden(app, !app.isHidden)
+                                menuTarget = null
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("App info") },
+                            onClick = {
+                                menuTarget = null
+                                context.startActivity(appInfoIntent(app.packageName))
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Uninstall") },
+                            onClick = {
+                                menuTarget = null
+                                requestUninstall(context, app.packageName)
+                            },
+                        )
+                    }
                 }
             }
         }
     }
+
+    renameTarget?.let { app ->
+        RenameDialog(
+            app = app,
+            onConfirm = { newLabel ->
+                viewModel.rename(app, newLabel)
+                renameTarget = null
+            },
+            onDismiss = { renameTarget = null },
+        )
+    }
+}
+
+@Composable
+private fun RenameDialog(app: LaunchableApp, onConfirm: (String?) -> Unit, onDismiss: () -> Unit) {
+    var text by remember(app.id) { mutableStateOf(app.displayLabel) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rename") },
+        text = {
+            TextField(value = text, onValueChange = { text = it }, singleLine = true)
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(text) }) { Text("Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = { onConfirm(null) }) { Text("Reset") }
+        },
+    )
 }

@@ -11,7 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,11 +21,20 @@ class AppRepository @Inject constructor(
     private val launcherApps: LauncherApps,
     private val userManager: UserManager,
     private val appDao: AppDao,
+    private val overridesRepository: AppOverridesRepository,
 ) {
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    val apps: Flow<List<LaunchableApp>> = appDao.observeAll().map { entities ->
-        entities.mapNotNull { it.toDomainOrNull() }
+    val apps: Flow<List<LaunchableApp>> = combine(
+        appDao.observeAll(),
+        overridesRepository.overrides,
+    ) { entities, overrides ->
+        val overrideById = overrides.associateBy { it.appId }
+        entities.mapNotNull { entity ->
+            val app = entity.toDomainOrNull() ?: return@mapNotNull null
+            val override = overrideById[app.id] ?: return@mapNotNull app
+            app.copy(customLabel = override.customLabel, isHidden = override.isHidden)
+        }
     }
 
     private val callback = object : LauncherApps.Callback() {
