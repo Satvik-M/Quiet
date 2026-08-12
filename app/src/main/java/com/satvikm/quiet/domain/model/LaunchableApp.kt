@@ -14,4 +14,7 @@ data class LaunchableApp(
     val label: String,
 ) {
     val packageName: String get() = componentName.packageName
+
+    /** Stable identity for persistence (favorites, hidden apps, etc.). */
+    val id: String get() = "${componentName.flattenToString()}#$userHandle"
 }

@@ -1,8 +1,9 @@
 package com.satvikm.quiet
 
 import android.os.Bundle
+import android.text.format.DateFormat
 import androidx.activity.ComponentActivity
-import androidx.activity.OnBackPressedCallback
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -11,9 +12,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -42,6 +47,7 @@ import com.satvikm.quiet.ui.theme.QuietTheme
 import com.satvikm.quiet.util.createChangeDefaultLauncherIntent
 import com.satvikm.quiet.util.isDefaultLauncher
 import dagger.hilt.android.AndroidEntryPoint
+import java.time.format.DateTimeFormatter
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -49,16 +55,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
-        onBackPressedDispatcher.addCallback(
-            this,
-            object : OnBackPressedCallback(true) {
-                override fun handleOnBackPressed() {
-                    // The home screen has nothing to pop back to; consume
-                    // the event so the launcher never finishes itself.
-                }
-            },
-        )
 
         setContent {
             QuietTheme {
@@ -73,6 +69,13 @@ private fun HomeScreen() {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var isDefault by remember { mutableStateOf(isDefaultLauncher(context)) }
+    var showAllApps by remember { mutableStateOf(false) }
+
+    // The home screen is the root of the task; there's nothing beneath it
+    // to pop back to, except the all-apps screen the user may have opened.
+    BackHandler(enabled = true) {
+        if (showAllApps) showAllApps = false
+    }
 
     // The user sets the default launcher in a system Settings screen, not
     // in this app, so re-check whenever we come back to the foreground.
@@ -119,27 +122,100 @@ private fun HomeScreen() {
                     Text("Set as default")
                 }
             }
+        } else if (showAllApps) {
+            AllAppsScreen(onBack = { showAllApps = false })
         } else {
-            // A debug listing for M3; the real home surface with favorites
-            // and gestures lands in M4/M5.
-            DebugAppList()
+            HomeSurface(onOpenAllApps = { showAllApps = true })
         }
     }
 }
 
 @Composable
-private fun DebugAppList(viewModel: HomeViewModel = hiltViewModel()) {
+private fun HomeSurface(onOpenAllApps: () -> Unit, viewModel: HomeViewModel = hiltViewModel()) {
+    val context = LocalContext.current
+    val now by viewModel.currentTime.collectAsStateWithLifecycle()
+    val batteryPercent by viewModel.batteryPercent.collectAsStateWithLifecycle()
+    val favorites by viewModel.favorites.collectAsStateWithLifecycle()
+
+    val timeFormatter = remember(context) {
+        DateTimeFormatter.ofPattern(if (DateFormat.is24HourFormat(context)) "H:mm" else "h:mm")
+    }
+    val dateFormatter = remember { DateTimeFormatter.ofPattern("EEEE, MMMM d") }
+    val onBackground = MaterialTheme.colorScheme.onBackground
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .systemBarsPadding()
+            .padding(24.dp),
+    ) {
+        Text(text = now.format(timeFormatter), style = MaterialTheme.typography.displayMedium, color = onBackground)
+        Text(text = now.format(dateFormatter), style = MaterialTheme.typography.bodyLarge, color = onBackground)
+        Text(text = "$batteryPercent%", style = MaterialTheme.typography.bodyMedium, color = onBackground)
+
+        Spacer(modifier = Modifier.padding(top = 32.dp))
+
+        Column {
+            favorites.forEach { app ->
+                Text(
+                    text = app.label,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = onBackground,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.launch(app) }
+                        .padding(vertical = 10.dp),
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        Text(
+            text = "All apps",
+            color = onBackground,
+            modifier = Modifier
+                .clickable(onClick = onOpenAllApps)
+                .padding(vertical = 8.dp),
+        )
+    }
+}
+
+@Composable
+private fun AllAppsScreen(onBack: () -> Unit, viewModel: HomeViewModel = hiltViewModel()) {
     val apps by viewModel.apps.collectAsStateWithLifecycle()
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        items(apps, key = { "${it.componentName}/${it.userHandle}" }) { app: LaunchableApp ->
-            Text(
-                text = app.label,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { viewModel.launch(app) }
-                    .padding(horizontal = 24.dp, vertical = 12.dp),
-            )
+    val favoriteIds by viewModel.favoriteIds.collectAsStateWithLifecycle()
+    val onBackground = MaterialTheme.colorScheme.onBackground
+
+    Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
+        Text(
+            text = "‹ Home",
+            color = onBackground,
+            modifier = Modifier
+                .clickable(onClick = onBack)
+                .padding(24.dp),
+        )
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            items(apps, key = { it.id }) { app: LaunchableApp ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.launch(app) }
+                        .padding(horizontal = 24.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = app.label,
+                        color = onBackground,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = if (app.id in favoriteIds) "★" else "☆",
+                        color = onBackground,
+                        modifier = Modifier.clickable { viewModel.toggleFavorite(app) },
+                    )
+                }
+            }
         }
     }
 }
