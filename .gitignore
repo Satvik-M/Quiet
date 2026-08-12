@@ -1,0 +1,25 @@
+# Build outputs
+build/
+.cxx/
+.externalNativeBuild/
+captures/
+
+# Gradle / Kotlin
+.gradle/
+.kotlin/
+
+# IDE
+*.iml
+/.idea/
+
+# Local machine config (SDK path, never share)
+local.properties
+
+# Signing material — never commit keystores or their passwords
+*.jks
+*.keystore
+keystore.properties
+
+# OS
+.DS_Store
+*.hprof
