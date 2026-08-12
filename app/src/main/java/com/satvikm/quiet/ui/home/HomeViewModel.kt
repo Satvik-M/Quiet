@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import java.time.ZonedDateTime
 import javax.inject.Inject
 
@@ -22,23 +21,16 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     @ApplicationContext context: Context,
     private val appRepository: AppRepository,
-    private val favoritesRepository: FavoritesRepository,
+    favoritesRepository: FavoritesRepository,
 ) : ViewModel() {
 
     private val started = SharingStarted.WhileSubscribed(5_000)
 
-    val apps: StateFlow<List<LaunchableApp>> = appRepository.apps.stateIn(
-        scope = viewModelScope,
-        started = started,
-        initialValue = emptyList(),
-    )
-
-    val favoriteIds: StateFlow<Set<String>> = favoritesRepository.favorites
-        .combine(apps) { favorites, _ -> favorites.map { it.appId }.toSet() }
-        .stateIn(viewModelScope, started, emptySet())
-
     /** Favorites in the user's chosen order, cross-referenced against live app data. */
-    val favorites: StateFlow<List<LaunchableApp>> = combine(apps, favoritesRepository.favorites) { allApps, favoriteEntities ->
+    val favorites: StateFlow<List<LaunchableApp>> = combine(
+        appRepository.apps,
+        favoritesRepository.favorites,
+    ) { allApps, favoriteEntities ->
         val byId = allApps.associateBy { it.id }
         favoriteEntities.mapNotNull { byId[it.appId] }
     }.stateIn(viewModelScope, started, emptyList())
@@ -57,9 +49,5 @@ class HomeViewModel @Inject constructor(
 
     fun launch(app: LaunchableApp) {
         appRepository.launch(app)
-    }
-
-    fun toggleFavorite(app: LaunchableApp) {
-        viewModelScope.launch { favoritesRepository.toggleFavorite(app) }
     }
 }
