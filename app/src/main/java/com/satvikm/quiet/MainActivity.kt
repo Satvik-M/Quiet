@@ -1,5 +1,6 @@
 package com.satvikm.quiet
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -18,7 +19,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,20 +43,33 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    // MainActivity is singleTask, so a subsequent Home press while it's
+    // already running redelivers the HOME intent via onNewIntent rather
+    // than recreating the activity. Bump this so the composition can react
+    // (close the drawer) the same way BackHandler does.
+    private val homePressCount = mutableIntStateOf(0)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         setContent {
             QuietTheme {
-                AppRoot()
+                AppRoot(homePressCount = homePressCount.intValue)
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.hasCategory(Intent.CATEGORY_HOME)) {
+            homePressCount.intValue++
         }
     }
 }
 
 @Composable
-private fun AppRoot() {
+private fun AppRoot(homePressCount: Int) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var isDefault by remember { mutableStateOf(isDefaultLauncher(context)) }
@@ -63,6 +79,10 @@ private fun AppRoot() {
     // to pop back to, except the drawer the user may have opened.
     BackHandler(enabled = true) {
         if (showDrawer) showDrawer = false
+    }
+
+    LaunchedEffect(homePressCount) {
+        if (homePressCount > 0) showDrawer = false
     }
 
     // The user sets the default launcher in a system Settings screen, not

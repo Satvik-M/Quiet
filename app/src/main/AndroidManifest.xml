@@ -40,6 +40,24 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+          Bare-minimum accessibility service (see GestureAccessibilityService)
+          used only for performGlobalAction — lock screen and expand
+          notifications have no public API. The user enables it once in
+          Settings; gestures degrade gracefully when it's off.
+        -->
+        <service
+            android:name=".service.GestureAccessibilityService"
+            android:exported="true"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
     </application>
 
 </manifest>

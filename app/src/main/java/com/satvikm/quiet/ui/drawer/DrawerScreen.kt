@@ -39,6 +39,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.satvikm.quiet.data.settings.GestureSlot
 import com.satvikm.quiet.domain.model.LaunchableApp
 import com.satvikm.quiet.util.appInfoIntent
 import com.satvikm.quiet.util.requestUninstall
@@ -128,6 +129,20 @@ fun DrawerScreen(viewModel: DrawerViewModel = hiltViewModel()) {
                             text = { Text(if (app.isHidden) "Unhide" else "Hide") },
                             onClick = {
                                 viewModel.setHidden(app, !app.isHidden)
+                                menuTarget = null
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Set as swipe-left app") },
+                            onClick = {
+                                viewModel.setGestureApp(GestureSlot.SWIPE_LEFT, app)
+                                menuTarget = null
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Set as swipe-right app") },
+                            onClick = {
+                                viewModel.setGestureApp(GestureSlot.SWIPE_RIGHT, app)
                                 menuTarget = null
                             },
                         )

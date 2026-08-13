@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.satvikm.quiet.data.apps.AppRepository
 import com.satvikm.quiet.data.favorites.FavoritesRepository
+import com.satvikm.quiet.data.settings.GestureSettingsRepository
+import com.satvikm.quiet.data.settings.GestureSlot
 import com.satvikm.quiet.domain.model.LaunchableApp
 import com.satvikm.quiet.util.batteryLevelFlow
 import com.satvikm.quiet.util.currentTimeFlow
@@ -23,6 +25,7 @@ class HomeViewModel @Inject constructor(
     @ApplicationContext context: Context,
     private val appRepository: AppRepository,
     private val favoritesRepository: FavoritesRepository,
+    private val gestureSettingsRepository: GestureSettingsRepository,
 ) : ViewModel() {
 
     private val started = SharingStarted.WhileSubscribed(5_000)
@@ -47,6 +50,14 @@ class HomeViewModel @Inject constructor(
         started = started,
         initialValue = 0,
     )
+
+    val swipeLeftApp: StateFlow<LaunchableApp?> = gestureApp(GestureSlot.SWIPE_LEFT)
+    val swipeRightApp: StateFlow<LaunchableApp?> = gestureApp(GestureSlot.SWIPE_RIGHT)
+
+    private fun gestureApp(slot: GestureSlot): StateFlow<LaunchableApp?> = combine(
+        appRepository.apps,
+        gestureSettingsRepository.appIdFor(slot),
+    ) { apps, appId -> apps.firstOrNull { it.id == appId } }.stateIn(viewModelScope, started, null)
 
     fun launch(app: LaunchableApp) {
         appRepository.launch(app)

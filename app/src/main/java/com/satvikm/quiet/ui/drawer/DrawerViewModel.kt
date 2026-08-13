@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.satvikm.quiet.data.apps.AppOverridesRepository
 import com.satvikm.quiet.data.apps.AppRepository
 import com.satvikm.quiet.data.favorites.FavoritesRepository
+import com.satvikm.quiet.data.settings.GestureSettingsRepository
+import com.satvikm.quiet.data.settings.GestureSlot
 import com.satvikm.quiet.domain.model.LaunchableApp
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +29,7 @@ class DrawerViewModel @Inject constructor(
     private val appRepository: AppRepository,
     private val favoritesRepository: FavoritesRepository,
     private val overridesRepository: AppOverridesRepository,
+    private val gestureSettingsRepository: GestureSettingsRepository,
 ) : ViewModel() {
 
     private val started = SharingStarted.WhileSubscribed(5_000)
@@ -61,6 +64,10 @@ class DrawerViewModel @Inject constructor(
 
     fun rename(app: LaunchableApp, newLabel: String?) {
         viewModelScope.launch { overridesRepository.setCustomLabel(app, newLabel) }
+    }
+
+    fun setGestureApp(slot: GestureSlot, app: LaunchableApp) {
+        viewModelScope.launch { gestureSettingsRepository.setAppFor(slot, app.id) }
     }
 
     private fun filterAndRank(apps: List<LaunchableApp>, query: String): List<LaunchableApp> {

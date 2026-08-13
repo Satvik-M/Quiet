@@ -1,9 +1,12 @@
 package com.satvikm.quiet.ui.home
 
+import android.content.Context
 import android.text.format.DateFormat
+import android.widget.Toast
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,6 +17,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -23,19 +27,29 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.satvikm.quiet.domain.model.LaunchableApp
+import com.satvikm.quiet.util.accessibilitySettingsIntent
+import com.satvikm.quiet.util.expandNotifications
+import com.satvikm.quiet.util.isGestureAccessibilityServiceEnabled
+import com.satvikm.quiet.util.lockScreen
 import java.time.format.DateTimeFormatter
+import kotlin.math.abs
+import kotlin.math.max
 import kotlin.math.roundToInt
 
-/** A swipe up this far (px) opens the drawer. */
-private const val OPEN_DRAWER_DRAG_THRESHOLD = -120f
+/** A drag past this far (px) on its dominant axis counts as a swipe. */
+private const val SWIPE_THRESHOLD = 120f
 
 @Composable
 fun HomeScreen(onOpenDrawer: () -> Unit, viewModel: HomeViewModel = hiltViewModel()) {
@@ -43,6 +57,8 @@ fun HomeScreen(onOpenDrawer: () -> Unit, viewModel: HomeViewModel = hiltViewMode
     val now by viewModel.currentTime.collectAsStateWithLifecycle()
     val batteryPercent by viewModel.batteryPercent.collectAsStateWithLifecycle()
     val favorites by viewModel.favorites.collectAsStateWithLifecycle()
+    val swipeLeftApp by viewModel.swipeLeftApp.collectAsStateWithLifecycle()
+    val swipeRightApp by viewModel.swipeRightApp.collectAsStateWithLifecycle()
 
     val timeFormatter = remember(context) {
         DateTimeFormatter.ofPattern(if (DateFormat.is24HourFormat(context)) "H:mm" else "h:mm")
@@ -50,16 +66,55 @@ fun HomeScreen(onOpenDrawer: () -> Unit, viewModel: HomeViewModel = hiltViewMode
     val dateFormatter = remember { DateTimeFormatter.ofPattern("EEEE, MMMM d") }
     val onBackground = MaterialTheme.colorScheme.onBackground
 
+    var accessibilityEnabled by remember { mutableStateOf(isGestureAccessibilityServiceEnabled(context)) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                accessibilityEnabled = isGestureAccessibilityServiceEnabled(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
-                var totalDrag = 0f
-                detectVerticalDragGestures(
-                    onDragStart = { totalDrag = 0f },
-                    onVerticalDrag = { _, dragAmount -> totalDrag += dragAmount },
+                detectTapGestures(
+                    onDoubleTap = {
+                        if (!lockScreen()) toastAccessibilityNeeded(context, "lock the screen")
+                    },
+                )
+            }
+            .pointerInput(swipeLeftApp, swipeRightApp) {
+                var totalDrag = Offset.Zero
+                detectDragGestures(
+                    onDragStart = { totalDrag = Offset.Zero },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        totalDrag += dragAmount
+                    },
                     onDragEnd = {
-                        if (totalDrag < OPEN_DRAWER_DRAG_THRESHOLD) onOpenDrawer()
+                        val absX = abs(totalDrag.x)
+                        val absY = abs(totalDrag.y)
+                        if (max(absX, absY) < SWIPE_THRESHOLD) return@detectDragGestures
+                        if (absX > absY) {
+                            if (totalDrag.x < 0) {
+                                swipeLeftApp?.let(viewModel::launch)
+                                    ?: Toast.makeText(context, "No swipe-left app set — long-press an app in the drawer", Toast.LENGTH_SHORT).show()
+                            } else {
+                                swipeRightApp?.let(viewModel::launch)
+                                    ?: Toast.makeText(context, "No swipe-right app set — long-press an app in the drawer", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            if (totalDrag.y < 0) {
+                                onOpenDrawer()
+                            } else {
+                                if (!expandNotifications()) toastAccessibilityNeeded(context, "open notifications")
+                            }
+                        }
                     },
                 )
             }
@@ -87,7 +142,26 @@ fun HomeScreen(onOpenDrawer: () -> Unit, viewModel: HomeViewModel = hiltViewMode
                 .clickable(onClick = onOpenDrawer)
                 .padding(vertical = 8.dp),
         )
+
+        if (!accessibilityEnabled) {
+            Text(
+                text = "Enable Accessibility for lock & notification gestures",
+                color = onBackground.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .clickable { context.startActivity(accessibilitySettingsIntent()) }
+                    .padding(top = 4.dp),
+            )
+        }
     }
+}
+
+private fun toastAccessibilityNeeded(context: Context, action: String) {
+    Toast.makeText(
+        context,
+        "Enable Quiet's Accessibility service in Settings to $action",
+        Toast.LENGTH_SHORT,
+    ).show()
 }
 
 @Composable
