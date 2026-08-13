@@ -1,9 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Normal permission: lets the long-press menu's "Uninstall" action
          use ACTION_UNINSTALL_PACKAGE directly. -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+
+    <!-- Signature-level; not actually grantable via this declaration. The
+         user grants "Usage access" in Settings, checked at runtime via
+         AppOpsManager. Declaring it here is just self-documentation and
+         helps some OEM Settings implementations list the app correctly. -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
 
     <!--
       Package visibility (API 30+): declaring that we query LAUNCHER

@@ -26,11 +26,13 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -38,6 +40,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.satvikm.quiet.data.settings.HomeAlignment
 import com.satvikm.quiet.domain.model.LaunchableApp
 import com.satvikm.quiet.util.accessibilitySettingsIntent
 import com.satvikm.quiet.util.expandNotifications
@@ -52,13 +55,21 @@ import kotlin.math.roundToInt
 private const val SWIPE_THRESHOLD = 120f
 
 @Composable
-fun HomeScreen(onOpenDrawer: () -> Unit, viewModel: HomeViewModel = hiltViewModel()) {
+fun HomeScreen(
+    onOpenDrawer: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenUsage: () -> Unit,
+    viewModel: HomeViewModel = hiltViewModel(),
+) {
     val context = LocalContext.current
     val now by viewModel.currentTime.collectAsStateWithLifecycle()
     val batteryPercent by viewModel.batteryPercent.collectAsStateWithLifecycle()
     val favorites by viewModel.favorites.collectAsStateWithLifecycle()
     val swipeLeftApp by viewModel.swipeLeftApp.collectAsStateWithLifecycle()
     val swipeRightApp by viewModel.swipeRightApp.collectAsStateWithLifecycle()
+    val alignment by viewModel.alignment.collectAsStateWithLifecycle()
+    val showScreenTime by viewModel.showScreenTime.collectAsStateWithLifecycle()
+    val screenTimeMillis by viewModel.screenTimeMillis.collectAsStateWithLifecycle()
 
     val timeFormatter = remember(context) {
         DateTimeFormatter.ofPattern(if (DateFormat.is24HourFormat(context)) "H:mm" else "h:mm")
@@ -72,6 +83,7 @@ fun HomeScreen(onOpenDrawer: () -> Unit, viewModel: HomeViewModel = hiltViewMode
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 accessibilityEnabled = isGestureAccessibilityServiceEnabled(context)
+                viewModel.refreshScreenTime()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -120,15 +132,26 @@ fun HomeScreen(onOpenDrawer: () -> Unit, viewModel: HomeViewModel = hiltViewMode
             }
             .systemBarsPadding()
             .padding(24.dp),
+        horizontalAlignment = if (alignment == HomeAlignment.CENTER) Alignment.CenterHorizontally else Alignment.Start,
     ) {
         Text(text = now.format(timeFormatter), style = MaterialTheme.typography.displayMedium, color = onBackground)
         Text(text = now.format(dateFormatter), style = MaterialTheme.typography.bodyLarge, color = onBackground)
         Text(text = "$batteryPercent%", style = MaterialTheme.typography.bodyMedium, color = onBackground)
 
+        if (showScreenTime) {
+            Text(
+                text = screenTimeMillis?.let { "Screen time today: ${formatScreenTime(it)}" } ?: "Screen time: grant Usage access",
+                style = MaterialTheme.typography.bodyMedium,
+                color = onBackground.copy(alpha = 0.7f),
+                modifier = Modifier.clickable(onClick = onOpenUsage),
+            )
+        }
+
         Spacer(modifier = Modifier.padding(top = 32.dp))
 
         FavoritesList(
             favorites = favorites,
+            alignment = alignment,
             onLaunch = viewModel::launch,
             onReorder = viewModel::reorderFavorites,
         )
@@ -140,6 +163,14 @@ fun HomeScreen(onOpenDrawer: () -> Unit, viewModel: HomeViewModel = hiltViewMode
             color = onBackground,
             modifier = Modifier
                 .clickable(onClick = onOpenDrawer)
+                .padding(vertical = 8.dp),
+        )
+
+        Text(
+            text = "Settings",
+            color = onBackground.copy(alpha = 0.7f),
+            modifier = Modifier
+                .clickable(onClick = onOpenSettings)
                 .padding(vertical = 8.dp),
         )
 
@@ -156,6 +187,13 @@ fun HomeScreen(onOpenDrawer: () -> Unit, viewModel: HomeViewModel = hiltViewMode
     }
 }
 
+private fun formatScreenTime(millis: Long): String {
+    val totalMinutes = millis / 60_000
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+    return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
+}
+
 private fun toastAccessibilityNeeded(context: Context, action: String) {
     Toast.makeText(
         context,
@@ -167,6 +205,7 @@ private fun toastAccessibilityNeeded(context: Context, action: String) {
 @Composable
 private fun FavoritesList(
     favorites: List<LaunchableApp>,
+    alignment: HomeAlignment,
     onLaunch: (LaunchableApp) -> Unit,
     onReorder: (List<String>) -> Unit,
 ) {
@@ -193,6 +232,7 @@ private fun FavoritesList(
                     text = app.displayLabel,
                     style = MaterialTheme.typography.titleMedium,
                     color = onBackground,
+                    textAlign = if (alignment == HomeAlignment.CENTER) TextAlign.Center else TextAlign.Start,
                     modifier = Modifier
                         .fillMaxWidth()
                         .onGloballyPositioned { rowHeightPx = it.size.height.toFloat() }

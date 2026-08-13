@@ -46,7 +46,11 @@ import com.satvikm.quiet.util.requestUninstall
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun DrawerScreen(viewModel: DrawerViewModel = hiltViewModel()) {
+fun DrawerScreen(
+    viewModel: DrawerViewModel = hiltViewModel(),
+    pickForGesture: GestureSlot? = null,
+    onGesturePicked: () -> Unit = {},
+) {
     val context = LocalContext.current
     val query by viewModel.queryText.collectAsStateWithLifecycle()
     val apps by viewModel.filteredApps.collectAsStateWithLifecycle()
@@ -65,6 +69,14 @@ fun DrawerScreen(viewModel: DrawerViewModel = hiltViewModel()) {
     }
 
     Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
+        if (pickForGesture != null) {
+            Text(
+                text = "Choose app for swipe ${if (pickForGesture == GestureSlot.SWIPE_LEFT) "left" else "right"}",
+                color = onBackground.copy(alpha = 0.6f),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+            )
+        }
         BasicTextField(
             value = query,
             onValueChange = viewModel::onQueryChange,
@@ -73,7 +85,16 @@ fun DrawerScreen(viewModel: DrawerViewModel = hiltViewModel()) {
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
             keyboardActions = KeyboardActions(
-                onGo = { apps.firstOrNull()?.let { viewModel.launch(it) } },
+                onGo = {
+                    apps.firstOrNull()?.let { app ->
+                        if (pickForGesture != null) {
+                            viewModel.setGestureApp(pickForGesture, app)
+                            onGesturePicked()
+                        } else {
+                            viewModel.launch(app)
+                        }
+                    }
+                },
             ),
             decorationBox = { innerTextField ->
                 if (query.isEmpty()) {
@@ -98,8 +119,15 @@ fun DrawerScreen(viewModel: DrawerViewModel = hiltViewModel()) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .combinedClickable(
-                                onClick = { viewModel.launch(app) },
-                                onLongClick = { menuTarget = app },
+                                onClick = {
+                                    if (pickForGesture != null) {
+                                        viewModel.setGestureApp(pickForGesture, app)
+                                        onGesturePicked()
+                                    } else {
+                                        viewModel.launch(app)
+                                    }
+                                },
+                                onLongClick = { if (pickForGesture == null) menuTarget = app },
                             )
                             .padding(horizontal = 24.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
