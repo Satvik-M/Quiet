@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Quiet</string>
-    <string name="accessibility_service_description">Lets Quiet lock the screen and open the notification shade from home-screen gestures. Quiet does not read screen content.</string>
+    <string name="accessibility_service_description">Lets Quiet lock the screen and open the notification shade from home-screen gestures, and show a friction screen when you open an app you\'ve chosen to add friction to. Quiet does not read screen content.</string>
 </resources>

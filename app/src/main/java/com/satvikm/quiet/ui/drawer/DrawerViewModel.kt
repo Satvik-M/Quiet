@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.satvikm.quiet.data.apps.AppOverridesRepository
 import com.satvikm.quiet.data.apps.AppRepository
+import com.satvikm.quiet.data.block.BlocklistRepository
 import com.satvikm.quiet.data.favorites.FavoritesRepository
 import com.satvikm.quiet.data.settings.GestureSettingsRepository
 import com.satvikm.quiet.data.settings.GestureSlot
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -30,6 +32,7 @@ class DrawerViewModel @Inject constructor(
     private val favoritesRepository: FavoritesRepository,
     private val overridesRepository: AppOverridesRepository,
     private val gestureSettingsRepository: GestureSettingsRepository,
+    private val blocklistRepository: BlocklistRepository,
 ) : ViewModel() {
 
     private val started = SharingStarted.WhileSubscribed(5_000)
@@ -39,6 +42,10 @@ class DrawerViewModel @Inject constructor(
 
     val favoriteIds: StateFlow<Set<String>> = favoritesRepository.favorites
         .combine(appRepository.apps) { favorites, _ -> favorites.map { it.appId }.toSet() }
+        .stateIn(viewModelScope, started, emptySet())
+
+    val blockedPackageNames: StateFlow<Set<String>> = blocklistRepository.blockedApps
+        .map { blocked -> blocked.map { it.packageName }.toSet() }
         .stateIn(viewModelScope, started, emptySet())
 
     /** Ranked so prefix matches ("cal" -> Calculator, Calendar) beat substring matches. */
@@ -68,6 +75,12 @@ class DrawerViewModel @Inject constructor(
 
     fun setGestureApp(slot: GestureSlot, app: LaunchableApp) {
         viewModelScope.launch { gestureSettingsRepository.setAppFor(slot, app.id) }
+    }
+
+    fun setBlocked(app: LaunchableApp, blocked: Boolean) {
+        viewModelScope.launch {
+            if (blocked) blocklistRepository.setBlocked(app.packageName) else blocklistRepository.unblock(app.packageName)
+        }
     }
 
     private fun filterAndRank(apps: List<LaunchableApp>, query: String): List<LaunchableApp> {

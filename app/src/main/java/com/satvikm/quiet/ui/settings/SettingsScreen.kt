@@ -39,6 +39,7 @@ fun SettingsScreen(
     val showScreenTime by viewModel.showScreenTime.collectAsStateWithLifecycle()
     val swipeLeftApp by viewModel.swipeLeftApp.collectAsStateWithLifecycle()
     val swipeRightApp by viewModel.swipeRightApp.collectAsStateWithLifecycle()
+    val blockedApps by viewModel.blockedApps.collectAsStateWithLifecycle()
     val onBackground = MaterialTheme.colorScheme.onBackground
 
     Column(
@@ -104,6 +105,29 @@ fun SettingsScreen(
         )
 
         Text(
+            text = "Friction",
+            color = onBackground.copy(alpha = 0.6f),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(top = 20.dp, bottom = 4.dp),
+        )
+        if (blockedApps.isEmpty()) {
+            Text(
+                text = "Long-press an app in the drawer to add friction",
+                color = onBackground.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        } else {
+            blockedApps.forEach { app ->
+                BlockedAppRow(
+                    app = app,
+                    onCycleDelay = { viewModel.cycleDelay(app) },
+                    onCycleDailyLimit = { viewModel.cycleDailyLimit(app) },
+                    onRemove = { viewModel.removeBlocked(app) },
+                )
+            }
+        }
+
+        Text(
             text = "Usage",
             color = onBackground.copy(alpha = 0.6f),
             style = MaterialTheme.typography.bodyMedium,
@@ -148,6 +172,51 @@ private fun SettingRow(
                         .padding(end = 24.dp),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun BlockedAppRow(
+    app: BlockedAppUi,
+    onCycleDelay: () -> Unit,
+    onCycleDailyLimit: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    val onBackground = MaterialTheme.colorScheme.onBackground
+    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = app.label,
+                color = onBackground,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = "Remove",
+                color = onBackground.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.clickable(onClick = onRemove),
+            )
+        }
+        Row(modifier = Modifier.padding(top = 4.dp)) {
+            Text(
+                text = "Delay: ${if (app.delaySeconds == 0) "off" else "${app.delaySeconds}s"}",
+                color = onBackground.copy(alpha = 0.6f),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier
+                    .clickable(onClick = onCycleDelay)
+                    .padding(end = 20.dp),
+            )
+            Text(
+                text = "Daily limit: ${app.dailyOpenLimit?.toString() ?: "none"}",
+                color = onBackground.copy(alpha = 0.6f),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.clickable(onClick = onCycleDailyLimit),
+            )
         }
     }
 }

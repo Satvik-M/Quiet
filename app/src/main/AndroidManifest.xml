@@ -51,6 +51,17 @@
         </activity>
 
         <!--
+          Started by GestureAccessibilityService on top of a blocklisted
+          app; not launched by any other app, so it doesn't need to be
+          exported.
+        -->
+        <activity
+            android:name=".ui.friction.FrictionActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.Quiet.Home" />
+
+        <!--
           Bare-minimum accessibility service (see GestureAccessibilityService)
           used only for performGlobalAction — lock screen and expand
           notifications have no public API. The user enables it once in

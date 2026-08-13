@@ -3,6 +3,7 @@ package com.satvikm.quiet.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.satvikm.quiet.data.apps.AppRepository
+import com.satvikm.quiet.data.block.BlocklistRepository
 import com.satvikm.quiet.data.settings.AppFontFamily
 import com.satvikm.quiet.data.settings.FontSize
 import com.satvikm.quiet.data.settings.GestureSettingsRepository
@@ -19,10 +20,21 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+data class BlockedAppUi(
+    val packageName: String,
+    val label: String,
+    val delaySeconds: Int,
+    val dailyOpenLimit: Int?,
+)
+
+private val DELAY_OPTIONS = listOf(0, 5, 10, 15, 20, 30)
+private val DAILY_LIMIT_OPTIONS: List<Int?> = listOf(null, 1, 3, 5, 10)
+
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val gestureSettingsRepository: GestureSettingsRepository,
+    private val blocklistRepository: BlocklistRepository,
     private val appRepository: AppRepository,
 ) : ViewModel() {
 
@@ -36,6 +48,21 @@ class SettingsViewModel @Inject constructor(
 
     val swipeLeftApp: StateFlow<LaunchableApp?> = gestureApp(GestureSlot.SWIPE_LEFT)
     val swipeRightApp: StateFlow<LaunchableApp?> = gestureApp(GestureSlot.SWIPE_RIGHT)
+
+    val blockedApps: StateFlow<List<BlockedAppUi>> = combine(
+        blocklistRepository.blockedApps,
+        appRepository.apps,
+    ) { blocked, apps ->
+        val labelByPackage = apps.associate { it.packageName to it.displayLabel }
+        blocked.map { entity ->
+            BlockedAppUi(
+                packageName = entity.packageName,
+                label = labelByPackage[entity.packageName] ?: entity.packageName,
+                delaySeconds = entity.delaySeconds,
+                dailyOpenLimit = entity.dailyOpenLimit,
+            )
+        }.sortedBy { it.label.lowercase() }
+    }.stateIn(viewModelScope, started, emptyList())
 
     private fun gestureApp(slot: GestureSlot): StateFlow<LaunchableApp?> = combine(
         appRepository.apps,
@@ -64,5 +91,19 @@ class SettingsViewModel @Inject constructor(
 
     fun clearGestureApp(slot: GestureSlot) {
         viewModelScope.launch { gestureSettingsRepository.setAppFor(slot, null) }
+    }
+
+    fun cycleDelay(app: BlockedAppUi) {
+        val next = DELAY_OPTIONS[(DELAY_OPTIONS.indexOf(app.delaySeconds).coerceAtLeast(0) + 1) % DELAY_OPTIONS.size]
+        viewModelScope.launch { blocklistRepository.setBlocked(app.packageName, next, app.dailyOpenLimit) }
+    }
+
+    fun cycleDailyLimit(app: BlockedAppUi) {
+        val next = DAILY_LIMIT_OPTIONS[(DAILY_LIMIT_OPTIONS.indexOf(app.dailyOpenLimit).coerceAtLeast(0) + 1) % DAILY_LIMIT_OPTIONS.size]
+        viewModelScope.launch { blocklistRepository.setBlocked(app.packageName, app.delaySeconds, next) }
+    }
+
+    fun removeBlocked(app: BlockedAppUi) {
+        viewModelScope.launch { blocklistRepository.unblock(app.packageName) }
     }
 }

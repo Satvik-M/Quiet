@@ -55,6 +55,7 @@ fun DrawerScreen(
     val query by viewModel.queryText.collectAsStateWithLifecycle()
     val apps by viewModel.filteredApps.collectAsStateWithLifecycle()
     val favoriteIds by viewModel.favoriteIds.collectAsStateWithLifecycle()
+    val blockedPackageNames by viewModel.blockedPackageNames.collectAsStateWithLifecycle()
     val onBackground = MaterialTheme.colorScheme.onBackground
 
     val focusRequester = remember { FocusRequester() }
@@ -171,6 +172,13 @@ fun DrawerScreen(
                             text = { Text("Set as swipe-right app") },
                             onClick = {
                                 viewModel.setGestureApp(GestureSlot.SWIPE_RIGHT, app)
+                                menuTarget = null
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(if (app.packageName in blockedPackageNames) "Remove friction" else "Add friction") },
+                            onClick = {
+                                viewModel.setBlocked(app, app.packageName !in blockedPackageNames)
                                 menuTarget = null
                             },
                         )

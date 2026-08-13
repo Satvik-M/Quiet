@@ -7,6 +7,7 @@ import androidx.room.Room
 import com.satvikm.quiet.data.apps.AppDao
 import com.satvikm.quiet.data.apps.AppDatabase
 import com.satvikm.quiet.data.apps.AppOverrideDao
+import com.satvikm.quiet.data.block.BlockedAppDao
 import com.satvikm.quiet.data.favorites.FavoriteDao
 import dagger.Module
 import dagger.Provides
@@ -48,4 +49,7 @@ object AppModule {
 
     @Provides
     fun provideAppOverrideDao(database: AppDatabase): AppOverrideDao = database.appOverrideDao()
+
+    @Provides
+    fun provideBlockedAppDao(database: AppDatabase): BlockedAppDao = database.blockedAppDao()
 }
