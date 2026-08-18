@@ -12,6 +12,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.satvikm.quiet.data.block.BlocklistRepository
+import com.satvikm.quiet.data.focus.FocusScheduleRepository
 import com.satvikm.quiet.data.settings.AppFontFamily
 import com.satvikm.quiet.data.settings.ThemeMode
 import com.satvikm.quiet.service.GestureAccessibilityService
@@ -32,6 +33,7 @@ import javax.inject.Inject
 class FrictionActivity : ComponentActivity() {
 
     @Inject lateinit var blocklistRepository: BlocklistRepository
+    @Inject lateinit var focusScheduleRepository: FocusScheduleRepository
 
     companion object {
         const val EXTRA_PACKAGE_NAME = "package_name"
@@ -74,6 +76,7 @@ class FrictionActivity : ComponentActivity() {
                     packageName = targetPackageName,
                     label = label,
                     blocklistRepository = blocklistRepository,
+                    focusScheduleRepository = focusScheduleRepository,
                     onClose = ::goHomeAndFinish,
                     onContinue = { continueToApp(targetPackageName) },
                 )

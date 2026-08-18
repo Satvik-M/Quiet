@@ -1,9 +1,12 @@
 package com.satvikm.quiet.ui.settings
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.satvikm.quiet.data.apps.AppRepository
 import com.satvikm.quiet.data.block.BlocklistRepository
+import com.satvikm.quiet.data.focus.FocusScheduleEntity
+import com.satvikm.quiet.data.focus.FocusScheduleRepository
 import com.satvikm.quiet.data.notifications.NotificationMuteRepository
 import com.satvikm.quiet.data.settings.AppFontFamily
 import com.satvikm.quiet.data.settings.FontSize
@@ -13,7 +16,9 @@ import com.satvikm.quiet.data.settings.HomeAlignment
 import com.satvikm.quiet.data.settings.SettingsRepository
 import com.satvikm.quiet.data.settings.ThemeMode
 import com.satvikm.quiet.domain.model.LaunchableApp
+import com.satvikm.quiet.util.setSystemGrayscale
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -38,10 +43,12 @@ private val DAILY_LIMIT_OPTIONS: List<Int?> = listOf(null, 1, 3, 5, 10)
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val settingsRepository: SettingsRepository,
     private val gestureSettingsRepository: GestureSettingsRepository,
     private val blocklistRepository: BlocklistRepository,
     private val notificationMuteRepository: NotificationMuteRepository,
+    private val focusScheduleRepository: FocusScheduleRepository,
     private val appRepository: AppRepository,
 ) : ViewModel() {
 
@@ -53,6 +60,10 @@ class SettingsViewModel @Inject constructor(
     val alignment: StateFlow<HomeAlignment> = settingsRepository.alignment.stateIn(viewModelScope, started, HomeAlignment.LEFT)
     val showScreenTime: StateFlow<Boolean> = settingsRepository.showScreenTime.stateIn(viewModelScope, started, false)
     val showMutedCount: StateFlow<Boolean> = settingsRepository.showMutedCount.stateIn(viewModelScope, started, false)
+    val grayscaleEnabled: StateFlow<Boolean> = settingsRepository.grayscaleEnabled.stateIn(viewModelScope, started, false)
+
+    val focusSchedules: StateFlow<List<FocusScheduleEntity>> = focusScheduleRepository.schedules
+        .stateIn(viewModelScope, started, emptyList())
 
     val swipeLeftApp: StateFlow<LaunchableApp?> = gestureApp(GestureSlot.SWIPE_LEFT)
     val swipeRightApp: StateFlow<LaunchableApp?> = gestureApp(GestureSlot.SWIPE_RIGHT)
@@ -134,5 +145,36 @@ class SettingsViewModel @Inject constructor(
 
     fun removeMuted(app: MutedAppUi) {
         viewModelScope.launch { notificationMuteRepository.unmute(app.packageName) }
+    }
+
+    fun setGrayscale(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setGrayscaleEnabled(enabled) }
+        setSystemGrayscale(context, enabled)
+    }
+
+    fun addFocusSchedule() {
+        viewModelScope.launch { focusScheduleRepository.addDefault() }
+    }
+
+    fun cycleStartHour(schedule: FocusScheduleEntity) {
+        viewModelScope.launch { focusScheduleRepository.update(schedule.copy(startHour = (schedule.startHour + 1) % 24)) }
+    }
+
+    fun cycleEndHour(schedule: FocusScheduleEntity) {
+        viewModelScope.launch { focusScheduleRepository.update(schedule.copy(endHour = (schedule.endHour + 1) % 24)) }
+    }
+
+    fun toggleDay(schedule: FocusScheduleEntity, dayBitIndex: Int) {
+        val bit = 1 shl dayBitIndex
+        val next = schedule.daysMask xor bit
+        viewModelScope.launch { focusScheduleRepository.update(schedule.copy(daysMask = next)) }
+    }
+
+    fun toggleScheduleEnabled(schedule: FocusScheduleEntity) {
+        viewModelScope.launch { focusScheduleRepository.update(schedule.copy(enabled = !schedule.enabled)) }
+    }
+
+    fun removeSchedule(schedule: FocusScheduleEntity) {
+        viewModelScope.launch { focusScheduleRepository.delete(schedule) }
     }
 }

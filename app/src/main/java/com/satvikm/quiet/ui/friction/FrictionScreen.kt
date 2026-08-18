@@ -21,13 +21,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.satvikm.quiet.data.block.BlocklistRepository
+import com.satvikm.quiet.data.focus.FocusScheduleRepository
 import kotlinx.coroutines.delay
+
+/** During an active focus window, a blocked app's delay is bumped to at least this. */
+private const val FOCUS_MIN_DELAY_SECONDS = 15
 
 @Composable
 fun FrictionScreen(
     packageName: String,
     label: String,
     blocklistRepository: BlocklistRepository,
+    focusScheduleRepository: FocusScheduleRepository,
     onClose: () -> Unit,
     onContinue: () -> Unit,
 ) {
@@ -35,13 +40,20 @@ fun FrictionScreen(
     var loaded by remember { mutableStateOf(false) }
     var secondsLeft by remember { mutableIntStateOf(0) }
     var dailyLimitReached by remember { mutableStateOf(false) }
+    var focusBlocked by remember { mutableStateOf(false) }
 
     BackHandler(onBack = onClose)
 
     LaunchedEffect(packageName) {
         val entity = blocklistRepository.get(packageName)
-        secondsLeft = entity?.delaySeconds ?: 0
+        val focusActive = focusScheduleRepository.isFocusActiveNow()
+        secondsLeft = if (focusActive) {
+            maxOf(entity?.delaySeconds ?: 0, FOCUS_MIN_DELAY_SECONDS)
+        } else {
+            entity?.delaySeconds ?: 0
+        }
         dailyLimitReached = entity?.let { !blocklistRepository.canContinue(it) } ?: false
+        focusBlocked = focusActive
         loaded = true
     }
 
@@ -66,6 +78,11 @@ fun FrictionScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         when {
+            focusBlocked -> Text(
+                text = "Blocked during focus time",
+                color = onBackground.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.bodyLarge,
+            )
             dailyLimitReached -> Text(
                 text = "Daily limit reached",
                 color = onBackground.copy(alpha = 0.7f),
@@ -94,7 +111,7 @@ fun FrictionScreen(
                 .padding(16.dp),
         )
 
-        if (!dailyLimitReached && secondsLeft == 0) {
+        if (!focusBlocked && !dailyLimitReached && secondsLeft == 0) {
             Text(
                 text = "Continue",
                 style = MaterialTheme.typography.titleLarge,

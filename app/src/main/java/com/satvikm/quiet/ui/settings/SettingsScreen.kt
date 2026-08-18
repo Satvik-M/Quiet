@@ -26,13 +26,16 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.satvikm.quiet.data.focus.FocusScheduleEntity
 import com.satvikm.quiet.data.settings.AppFontFamily
 import com.satvikm.quiet.data.settings.FontSize
 import com.satvikm.quiet.data.settings.GestureSlot
 import com.satvikm.quiet.data.settings.HomeAlignment
 import com.satvikm.quiet.data.settings.ThemeMode
 import com.satvikm.quiet.domain.model.LaunchableApp
+import com.satvikm.quiet.util.grayscaleGrantCommand
 import com.satvikm.quiet.util.isNotificationAccessGranted
+import com.satvikm.quiet.util.isWriteSecureSettingsGranted
 import com.satvikm.quiet.util.notificationListenerSettingsIntent
 
 @Composable
@@ -52,15 +55,19 @@ fun SettingsScreen(
     val blockedApps by viewModel.blockedApps.collectAsStateWithLifecycle()
     val mutedApps by viewModel.mutedApps.collectAsStateWithLifecycle()
     val showMutedCount by viewModel.showMutedCount.collectAsStateWithLifecycle()
+    val grayscaleEnabled by viewModel.grayscaleEnabled.collectAsStateWithLifecycle()
+    val focusSchedules by viewModel.focusSchedules.collectAsStateWithLifecycle()
     val onBackground = MaterialTheme.colorScheme.onBackground
 
     val context = LocalContext.current
     var notificationAccessGranted by remember { mutableStateOf(isNotificationAccessGranted(context)) }
+    var writeSecureSettingsGranted by remember { mutableStateOf(isWriteSecureSettingsGranted(context)) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 notificationAccessGranted = isNotificationAccessGranted(context)
+                writeSecureSettingsGranted = isWriteSecureSettingsGranted(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -153,6 +160,37 @@ fun SettingsScreen(
         }
 
         Text(
+            text = "Focus schedules",
+            color = onBackground.copy(alpha = 0.6f),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(top = 20.dp, bottom = 4.dp),
+        )
+        Text(
+            text = "During these windows, friction apps get a longer delay and no \"Continue\"",
+            color = onBackground.copy(alpha = 0.5f),
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+        focusSchedules.forEach { schedule ->
+            FocusScheduleRow(
+                schedule = schedule,
+                onCycleStart = { viewModel.cycleStartHour(schedule) },
+                onCycleEnd = { viewModel.cycleEndHour(schedule) },
+                onToggleDay = { day -> viewModel.toggleDay(schedule, day) },
+                onToggleEnabled = { viewModel.toggleScheduleEnabled(schedule) },
+                onRemove = { viewModel.removeSchedule(schedule) },
+            )
+        }
+        Text(
+            text = "Add schedule",
+            color = onBackground,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier
+                .clickable(onClick = viewModel::addFocusSchedule)
+                .padding(top = 4.dp, bottom = 8.dp),
+        )
+
+        Text(
             text = "Notifications",
             color = onBackground.copy(alpha = 0.6f),
             style = MaterialTheme.typography.bodyMedium,
@@ -184,6 +222,33 @@ fun SettingsScreen(
             selectedIndex = if (showMutedCount) 1 else 0,
             onSelect = { viewModel.setShowMutedCount(it == 1) },
         )
+
+        Text(
+            text = "Grayscale",
+            color = onBackground.copy(alpha = 0.6f),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(top = 20.dp, bottom = 4.dp),
+        )
+        if (!writeSecureSettingsGranted) {
+            Text(
+                text = "Grayscale needs a one-time permission grant over ADB — Settings has no UI for it:",
+                color = onBackground.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                text = grayscaleGrantCommand(context),
+                color = onBackground.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        } else {
+            SettingRow(
+                label = "System-wide grayscale",
+                options = listOf("Off", "On"),
+                selectedIndex = if (grayscaleEnabled) 1 else 0,
+                onSelect = { viewModel.setGrayscale(it == 1) },
+            )
+        }
 
         Text(
             text = "Usage",
@@ -275,6 +340,70 @@ private fun BlockedAppRow(
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.clickable(onClick = onCycleDailyLimit),
             )
+        }
+    }
+}
+
+private val DAY_LABELS = listOf("M", "T", "W", "T", "F", "S", "S")
+
+@Composable
+private fun FocusScheduleRow(
+    schedule: FocusScheduleEntity,
+    onCycleStart: () -> Unit,
+    onCycleEnd: () -> Unit,
+    onToggleDay: (Int) -> Unit,
+    onToggleEnabled: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    val onBackground = MaterialTheme.colorScheme.onBackground
+    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "%02d:00–%02d:00".format(schedule.startHour, schedule.endHour),
+                color = if (schedule.enabled) onBackground else onBackground.copy(alpha = 0.4f),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onToggleEnabled),
+            )
+            Text(
+                text = "Remove",
+                color = onBackground.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.clickable(onClick = onRemove),
+            )
+        }
+        Row(modifier = Modifier.padding(top = 4.dp)) {
+            Text(
+                text = "Start",
+                color = onBackground.copy(alpha = 0.6f),
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .clickable(onClick = onCycleStart)
+                    .padding(end = 16.dp),
+            )
+            Text(
+                text = "End",
+                color = onBackground.copy(alpha = 0.6f),
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.clickable(onClick = onCycleEnd),
+            )
+        }
+        Row(modifier = Modifier.padding(top = 4.dp)) {
+            DAY_LABELS.forEachIndexed { index, dayLabel ->
+                val included = (schedule.daysMask and (1 shl index)) != 0
+                Text(
+                    text = dayLabel,
+                    color = if (included) onBackground else onBackground.copy(alpha = 0.3f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier
+                        .clickable { onToggleDay(index) }
+                        .padding(end = 12.dp),
+                )
+            }
         }
     }
 }

@@ -29,6 +29,7 @@ class SettingsRepository @Inject constructor(
         val ALIGNMENT = stringPreferencesKey("alignment")
         val SHOW_SCREEN_TIME = booleanPreferencesKey("show_screen_time")
         val SHOW_MUTED_COUNT = booleanPreferencesKey("show_muted_count")
+        val GRAYSCALE_ENABLED = booleanPreferencesKey("grayscale_enabled")
     }
 
     val themeMode: Flow<ThemeMode> = enumFlow(Keys.THEME_MODE, ThemeMode.SYSTEM, ThemeMode::valueOf)
@@ -37,6 +38,7 @@ class SettingsRepository @Inject constructor(
     val alignment: Flow<HomeAlignment> = enumFlow(Keys.ALIGNMENT, HomeAlignment.LEFT, HomeAlignment::valueOf)
     val showScreenTime: Flow<Boolean> = context.appSettingsDataStore.data.map { it[Keys.SHOW_SCREEN_TIME] ?: false }
     val showMutedCount: Flow<Boolean> = context.appSettingsDataStore.data.map { it[Keys.SHOW_MUTED_COUNT] ?: false }
+    val grayscaleEnabled: Flow<Boolean> = context.appSettingsDataStore.data.map { it[Keys.GRAYSCALE_ENABLED] ?: false }
 
     suspend fun setThemeMode(mode: ThemeMode) = set(Keys.THEME_MODE, mode.name)
     suspend fun setFontFamily(family: AppFontFamily) = set(Keys.FONT_FAMILY, family.name)
@@ -47,6 +49,9 @@ class SettingsRepository @Inject constructor(
     }
     suspend fun setShowMutedCount(show: Boolean) {
         context.appSettingsDataStore.edit { it[Keys.SHOW_MUTED_COUNT] = show }
+    }
+    suspend fun setGrayscaleEnabled(enabled: Boolean) {
+        context.appSettingsDataStore.edit { it[Keys.GRAYSCALE_ENABLED] = enabled }
     }
 
     private fun <T : Enum<T>> enumFlow(

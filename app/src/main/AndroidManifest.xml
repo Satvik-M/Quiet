@@ -14,6 +14,13 @@
         android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
 
+    <!-- Signature-level; must be declared here for `adb shell pm grant` to
+         have anything to grant. There is no in-app or Settings-UI path to
+         it — see §5.7 of the build plan and GrayscaleUtil. -->
+    <uses-permission
+        android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
+
     <!--
       Package visibility (API 30+): declaring that we query LAUNCHER
       activities grants implicit visibility into every launchable app's
