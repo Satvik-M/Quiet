@@ -7,6 +7,9 @@ import com.satvikm.quiet.data.block.BlockedAppDao
 import com.satvikm.quiet.data.block.BlockedAppEntity
 import com.satvikm.quiet.data.favorites.FavoriteDao
 import com.satvikm.quiet.data.favorites.FavoriteEntity
+import com.satvikm.quiet.data.notifications.MutedAppDao
+import com.satvikm.quiet.data.notifications.MutedAppEntity
+import com.satvikm.quiet.data.notifications.MutedNotificationEntity
 
 @Database(
     entities = [
@@ -15,8 +18,10 @@ import com.satvikm.quiet.data.favorites.FavoriteEntity
         AppOverrideEntity::class,
         BlockedAppEntity::class,
         AppOpenEntity::class,
+        MutedAppEntity::class,
+        MutedNotificationEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -24,4 +29,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun favoriteDao(): FavoriteDao
     abstract fun appOverrideDao(): AppOverrideDao
     abstract fun blockedAppDao(): BlockedAppDao
+    abstract fun mutedAppDao(): MutedAppDao
 }

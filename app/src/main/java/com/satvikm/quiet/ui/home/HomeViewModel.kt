@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.satvikm.quiet.data.apps.AppRepository
 import com.satvikm.quiet.data.favorites.FavoritesRepository
+import com.satvikm.quiet.data.notifications.NotificationMuteRepository
 import com.satvikm.quiet.data.settings.GestureSettingsRepository
 import com.satvikm.quiet.data.settings.GestureSlot
 import com.satvikm.quiet.data.settings.HomeAlignment
@@ -33,6 +34,7 @@ class HomeViewModel @Inject constructor(
     private val gestureSettingsRepository: GestureSettingsRepository,
     private val settingsRepository: SettingsRepository,
     private val usageRepository: UsageRepository,
+    private val notificationMuteRepository: NotificationMuteRepository,
 ) : ViewModel() {
 
     private val started = SharingStarted.WhileSubscribed(5_000)
@@ -63,12 +65,17 @@ class HomeViewModel @Inject constructor(
 
     val alignment: StateFlow<HomeAlignment> = settingsRepository.alignment.stateIn(viewModelScope, started, HomeAlignment.LEFT)
     val showScreenTime: StateFlow<Boolean> = settingsRepository.showScreenTime.stateIn(viewModelScope, started, false)
+    val showMutedCount: StateFlow<Boolean> = settingsRepository.showMutedCount.stateIn(viewModelScope, started, false)
 
     private val _screenTimeMillis = MutableStateFlow<Long?>(null)
     val screenTimeMillis: StateFlow<Long?> = _screenTimeMillis.asStateFlow()
 
+    private val _mutedCountToday = MutableStateFlow(0)
+    val mutedCountToday: StateFlow<Int> = _mutedCountToday.asStateFlow()
+
     init {
         refreshScreenTime()
+        refreshMutedCount()
     }
 
     private fun gestureApp(slot: GestureSlot): StateFlow<LaunchableApp?> = combine(
@@ -90,5 +97,9 @@ class HomeViewModel @Inject constructor(
             return
         }
         viewModelScope.launch { _screenTimeMillis.value = usageRepository.today().totalMillis }
+    }
+
+    fun refreshMutedCount() {
+        viewModelScope.launch { _mutedCountToday.value = notificationMuteRepository.mutedCountToday() }
     }
 }

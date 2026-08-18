@@ -78,6 +78,20 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
         </service>
+
+        <!--
+          Cancels notifications from muted apps. The user enables it once
+          in Settings (Notification access); it degrades gracefully to
+          doing nothing when off.
+        -->
+        <service
+            android:name=".service.NotificationFilterService"
+            android:exported="true"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

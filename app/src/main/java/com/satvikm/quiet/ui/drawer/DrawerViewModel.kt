@@ -6,6 +6,7 @@ import com.satvikm.quiet.data.apps.AppOverridesRepository
 import com.satvikm.quiet.data.apps.AppRepository
 import com.satvikm.quiet.data.block.BlocklistRepository
 import com.satvikm.quiet.data.favorites.FavoritesRepository
+import com.satvikm.quiet.data.notifications.NotificationMuteRepository
 import com.satvikm.quiet.data.settings.GestureSettingsRepository
 import com.satvikm.quiet.data.settings.GestureSlot
 import com.satvikm.quiet.domain.model.LaunchableApp
@@ -33,6 +34,7 @@ class DrawerViewModel @Inject constructor(
     private val overridesRepository: AppOverridesRepository,
     private val gestureSettingsRepository: GestureSettingsRepository,
     private val blocklistRepository: BlocklistRepository,
+    private val notificationMuteRepository: NotificationMuteRepository,
 ) : ViewModel() {
 
     private val started = SharingStarted.WhileSubscribed(5_000)
@@ -46,6 +48,10 @@ class DrawerViewModel @Inject constructor(
 
     val blockedPackageNames: StateFlow<Set<String>> = blocklistRepository.blockedApps
         .map { blocked -> blocked.map { it.packageName }.toSet() }
+        .stateIn(viewModelScope, started, emptySet())
+
+    val mutedPackageNames: StateFlow<Set<String>> = notificationMuteRepository.mutedApps
+        .map { muted -> muted.map { it.packageName }.toSet() }
         .stateIn(viewModelScope, started, emptySet())
 
     /** Ranked so prefix matches ("cal" -> Calculator, Calendar) beat substring matches. */
@@ -80,6 +86,12 @@ class DrawerViewModel @Inject constructor(
     fun setBlocked(app: LaunchableApp, blocked: Boolean) {
         viewModelScope.launch {
             if (blocked) blocklistRepository.setBlocked(app.packageName) else blocklistRepository.unblock(app.packageName)
+        }
+    }
+
+    fun setMuted(app: LaunchableApp, muted: Boolean) {
+        viewModelScope.launch {
+            if (muted) notificationMuteRepository.mute(app.packageName) else notificationMuteRepository.unmute(app.packageName)
         }
     }
 

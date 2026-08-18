@@ -12,11 +12,19 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.satvikm.quiet.data.settings.AppFontFamily
 import com.satvikm.quiet.data.settings.FontSize
@@ -24,6 +32,8 @@ import com.satvikm.quiet.data.settings.GestureSlot
 import com.satvikm.quiet.data.settings.HomeAlignment
 import com.satvikm.quiet.data.settings.ThemeMode
 import com.satvikm.quiet.domain.model.LaunchableApp
+import com.satvikm.quiet.util.isNotificationAccessGranted
+import com.satvikm.quiet.util.notificationListenerSettingsIntent
 
 @Composable
 fun SettingsScreen(
@@ -40,7 +50,22 @@ fun SettingsScreen(
     val swipeLeftApp by viewModel.swipeLeftApp.collectAsStateWithLifecycle()
     val swipeRightApp by viewModel.swipeRightApp.collectAsStateWithLifecycle()
     val blockedApps by viewModel.blockedApps.collectAsStateWithLifecycle()
+    val mutedApps by viewModel.mutedApps.collectAsStateWithLifecycle()
+    val showMutedCount by viewModel.showMutedCount.collectAsStateWithLifecycle()
     val onBackground = MaterialTheme.colorScheme.onBackground
+
+    val context = LocalContext.current
+    var notificationAccessGranted by remember { mutableStateOf(isNotificationAccessGranted(context)) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                notificationAccessGranted = isNotificationAccessGranted(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     Column(
         modifier = Modifier
@@ -126,6 +151,39 @@ fun SettingsScreen(
                 )
             }
         }
+
+        Text(
+            text = "Notifications",
+            color = onBackground.copy(alpha = 0.6f),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(top = 20.dp, bottom = 4.dp),
+        )
+        if (!notificationAccessGranted) {
+            Text(
+                text = "Grant Notification access to mute apps",
+                color = onBackground.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier
+                    .clickable { context.startActivity(notificationListenerSettingsIntent()) }
+                    .padding(bottom = 8.dp),
+            )
+        } else if (mutedApps.isEmpty()) {
+            Text(
+                text = "Long-press an app in the drawer to mute it",
+                color = onBackground.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        } else {
+            mutedApps.forEach { app ->
+                MutedAppRow(app = app, onRemove = { viewModel.removeMuted(app) })
+            }
+        }
+        SettingRow(
+            label = "Muted count on home",
+            options = listOf("Off", "On"),
+            selectedIndex = if (showMutedCount) 1 else 0,
+            onSelect = { viewModel.setShowMutedCount(it == 1) },
+        )
 
         Text(
             text = "Usage",
@@ -218,6 +276,30 @@ private fun BlockedAppRow(
                 modifier = Modifier.clickable(onClick = onCycleDailyLimit),
             )
         }
+    }
+}
+
+@Composable
+private fun MutedAppRow(app: MutedAppUi, onRemove: () -> Unit) {
+    val onBackground = MaterialTheme.colorScheme.onBackground
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = app.label,
+            color = onBackground,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = "Remove",
+            color = onBackground.copy(alpha = 0.5f),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.clickable(onClick = onRemove),
+        )
     }
 }
 

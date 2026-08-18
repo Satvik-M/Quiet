@@ -9,6 +9,7 @@ import com.satvikm.quiet.data.apps.AppDatabase
 import com.satvikm.quiet.data.apps.AppOverrideDao
 import com.satvikm.quiet.data.block.BlockedAppDao
 import com.satvikm.quiet.data.favorites.FavoriteDao
+import com.satvikm.quiet.data.notifications.MutedAppDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -52,4 +53,7 @@ object AppModule {
 
     @Provides
     fun provideBlockedAppDao(database: AppDatabase): BlockedAppDao = database.blockedAppDao()
+
+    @Provides
+    fun provideMutedAppDao(database: AppDatabase): MutedAppDao = database.mutedAppDao()
 }

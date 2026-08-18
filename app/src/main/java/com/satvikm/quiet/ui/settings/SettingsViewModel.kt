@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.satvikm.quiet.data.apps.AppRepository
 import com.satvikm.quiet.data.block.BlocklistRepository
+import com.satvikm.quiet.data.notifications.NotificationMuteRepository
 import com.satvikm.quiet.data.settings.AppFontFamily
 import com.satvikm.quiet.data.settings.FontSize
 import com.satvikm.quiet.data.settings.GestureSettingsRepository
@@ -27,6 +28,11 @@ data class BlockedAppUi(
     val dailyOpenLimit: Int?,
 )
 
+data class MutedAppUi(
+    val packageName: String,
+    val label: String,
+)
+
 private val DELAY_OPTIONS = listOf(0, 5, 10, 15, 20, 30)
 private val DAILY_LIMIT_OPTIONS: List<Int?> = listOf(null, 1, 3, 5, 10)
 
@@ -35,6 +41,7 @@ class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val gestureSettingsRepository: GestureSettingsRepository,
     private val blocklistRepository: BlocklistRepository,
+    private val notificationMuteRepository: NotificationMuteRepository,
     private val appRepository: AppRepository,
 ) : ViewModel() {
 
@@ -45,6 +52,7 @@ class SettingsViewModel @Inject constructor(
     val fontSize: StateFlow<FontSize> = settingsRepository.fontSize.stateIn(viewModelScope, started, FontSize.MEDIUM)
     val alignment: StateFlow<HomeAlignment> = settingsRepository.alignment.stateIn(viewModelScope, started, HomeAlignment.LEFT)
     val showScreenTime: StateFlow<Boolean> = settingsRepository.showScreenTime.stateIn(viewModelScope, started, false)
+    val showMutedCount: StateFlow<Boolean> = settingsRepository.showMutedCount.stateIn(viewModelScope, started, false)
 
     val swipeLeftApp: StateFlow<LaunchableApp?> = gestureApp(GestureSlot.SWIPE_LEFT)
     val swipeRightApp: StateFlow<LaunchableApp?> = gestureApp(GestureSlot.SWIPE_RIGHT)
@@ -60,6 +68,19 @@ class SettingsViewModel @Inject constructor(
                 label = labelByPackage[entity.packageName] ?: entity.packageName,
                 delaySeconds = entity.delaySeconds,
                 dailyOpenLimit = entity.dailyOpenLimit,
+            )
+        }.sortedBy { it.label.lowercase() }
+    }.stateIn(viewModelScope, started, emptyList())
+
+    val mutedApps: StateFlow<List<MutedAppUi>> = combine(
+        notificationMuteRepository.mutedApps,
+        appRepository.apps,
+    ) { muted, apps ->
+        val labelByPackage = apps.associate { it.packageName to it.displayLabel }
+        muted.map { entity ->
+            MutedAppUi(
+                packageName = entity.packageName,
+                label = labelByPackage[entity.packageName] ?: entity.packageName,
             )
         }.sortedBy { it.label.lowercase() }
     }.stateIn(viewModelScope, started, emptyList())
@@ -89,6 +110,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.setShowScreenTime(show) }
     }
 
+    fun setShowMutedCount(show: Boolean) {
+        viewModelScope.launch { settingsRepository.setShowMutedCount(show) }
+    }
+
     fun clearGestureApp(slot: GestureSlot) {
         viewModelScope.launch { gestureSettingsRepository.setAppFor(slot, null) }
     }
@@ -105,5 +130,9 @@ class SettingsViewModel @Inject constructor(
 
     fun removeBlocked(app: BlockedAppUi) {
         viewModelScope.launch { blocklistRepository.unblock(app.packageName) }
+    }
+
+    fun removeMuted(app: MutedAppUi) {
+        viewModelScope.launch { notificationMuteRepository.unmute(app.packageName) }
     }
 }

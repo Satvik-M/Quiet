@@ -70,6 +70,8 @@ fun HomeScreen(
     val alignment by viewModel.alignment.collectAsStateWithLifecycle()
     val showScreenTime by viewModel.showScreenTime.collectAsStateWithLifecycle()
     val screenTimeMillis by viewModel.screenTimeMillis.collectAsStateWithLifecycle()
+    val showMutedCount by viewModel.showMutedCount.collectAsStateWithLifecycle()
+    val mutedCountToday by viewModel.mutedCountToday.collectAsStateWithLifecycle()
 
     val timeFormatter = remember(context) {
         DateTimeFormatter.ofPattern(if (DateFormat.is24HourFormat(context)) "H:mm" else "h:mm")
@@ -84,6 +86,7 @@ fun HomeScreen(
             if (event == Lifecycle.Event.ON_RESUME) {
                 accessibilityEnabled = isGestureAccessibilityServiceEnabled(context)
                 viewModel.refreshScreenTime()
+                viewModel.refreshMutedCount()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -144,6 +147,14 @@ fun HomeScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = onBackground.copy(alpha = 0.7f),
                 modifier = Modifier.clickable(onClick = onOpenUsage),
+            )
+        }
+
+        if (showMutedCount) {
+            Text(
+                text = "$mutedCountToday notifications muted today",
+                style = MaterialTheme.typography.bodyMedium,
+                color = onBackground.copy(alpha = 0.7f),
             )
         }
 

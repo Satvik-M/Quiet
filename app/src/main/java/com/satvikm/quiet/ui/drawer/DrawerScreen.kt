@@ -56,6 +56,7 @@ fun DrawerScreen(
     val apps by viewModel.filteredApps.collectAsStateWithLifecycle()
     val favoriteIds by viewModel.favoriteIds.collectAsStateWithLifecycle()
     val blockedPackageNames by viewModel.blockedPackageNames.collectAsStateWithLifecycle()
+    val mutedPackageNames by viewModel.mutedPackageNames.collectAsStateWithLifecycle()
     val onBackground = MaterialTheme.colorScheme.onBackground
 
     val focusRequester = remember { FocusRequester() }
@@ -179,6 +180,13 @@ fun DrawerScreen(
                             text = { Text(if (app.packageName in blockedPackageNames) "Remove friction" else "Add friction") },
                             onClick = {
                                 viewModel.setBlocked(app, app.packageName !in blockedPackageNames)
+                                menuTarget = null
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(if (app.packageName in mutedPackageNames) "Unmute notifications" else "Mute notifications") },
+                            onClick = {
+                                viewModel.setMuted(app, app.packageName !in mutedPackageNames)
                                 menuTarget = null
                             },
                         )
