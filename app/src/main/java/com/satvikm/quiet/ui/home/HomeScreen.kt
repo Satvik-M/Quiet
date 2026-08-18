@@ -32,6 +32,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -40,6 +42,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.satvikm.quiet.R
 import com.satvikm.quiet.data.settings.HomeAlignment
 import com.satvikm.quiet.domain.model.LaunchableApp
 import com.satvikm.quiet.util.accessibilitySettingsIntent
@@ -79,6 +82,14 @@ fun HomeScreen(
     val dateFormatter = remember { DateTimeFormatter.ofPattern("EEEE, MMMM d") }
     val onBackground = MaterialTheme.colorScheme.onBackground
 
+    // Resolved here (not inside the pointerInput lambdas below) so these
+    // are plain strings by the time gesture callbacks run — Compose lint
+    // flags resource lookups via LocalContext.current outside composition.
+    val lockScreenActionLabel = stringResource(R.string.action_lock_the_screen)
+    val openNotificationsActionLabel = stringResource(R.string.action_open_notifications)
+    val noSwipeLeftAppMessage = stringResource(R.string.no_swipe_left_app_toast)
+    val noSwipeRightAppMessage = stringResource(R.string.no_swipe_right_app_toast)
+
     var accessibilityEnabled by remember { mutableStateOf(isGestureAccessibilityServiceEnabled(context)) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -99,7 +110,7 @@ fun HomeScreen(
             .pointerInput(Unit) {
                 detectTapGestures(
                     onDoubleTap = {
-                        if (!lockScreen()) toastAccessibilityNeeded(context, "lock the screen")
+                        if (!lockScreen()) toastAccessibilityNeeded(context, lockScreenActionLabel)
                     },
                 )
             }
@@ -118,16 +129,16 @@ fun HomeScreen(
                         if (absX > absY) {
                             if (totalDrag.x < 0) {
                                 swipeLeftApp?.let(viewModel::launch)
-                                    ?: Toast.makeText(context, "No swipe-left app set — long-press an app in the drawer", Toast.LENGTH_SHORT).show()
+                                    ?: Toast.makeText(context, noSwipeLeftAppMessage, Toast.LENGTH_SHORT).show()
                             } else {
                                 swipeRightApp?.let(viewModel::launch)
-                                    ?: Toast.makeText(context, "No swipe-right app set — long-press an app in the drawer", Toast.LENGTH_SHORT).show()
+                                    ?: Toast.makeText(context, noSwipeRightAppMessage, Toast.LENGTH_SHORT).show()
                             }
                         } else {
                             if (totalDrag.y < 0) {
                                 onOpenDrawer()
                             } else {
-                                if (!expandNotifications()) toastAccessibilityNeeded(context, "open notifications")
+                                if (!expandNotifications()) toastAccessibilityNeeded(context, openNotificationsActionLabel)
                             }
                         }
                     },
@@ -139,11 +150,12 @@ fun HomeScreen(
     ) {
         Text(text = now.format(timeFormatter), style = MaterialTheme.typography.displayMedium, color = onBackground)
         Text(text = now.format(dateFormatter), style = MaterialTheme.typography.bodyLarge, color = onBackground)
-        Text(text = "$batteryPercent%", style = MaterialTheme.typography.bodyMedium, color = onBackground)
+        Text(text = stringResource(R.string.battery_percent, batteryPercent), style = MaterialTheme.typography.bodyMedium, color = onBackground)
 
         if (showScreenTime) {
             Text(
-                text = screenTimeMillis?.let { "Screen time today: ${formatScreenTime(it)}" } ?: "Screen time: grant Usage access",
+                text = screenTimeMillis?.let { stringResource(R.string.screen_time_today, formatScreenTime(it)) }
+                    ?: stringResource(R.string.screen_time_grant_access),
                 style = MaterialTheme.typography.bodyMedium,
                 color = onBackground.copy(alpha = 0.7f),
                 modifier = Modifier.clickable(onClick = onOpenUsage),
@@ -152,7 +164,7 @@ fun HomeScreen(
 
         if (showMutedCount) {
             Text(
-                text = "$mutedCountToday notifications muted today",
+                text = pluralStringResource(R.plurals.muted_count_today, mutedCountToday, mutedCountToday),
                 style = MaterialTheme.typography.bodyMedium,
                 color = onBackground.copy(alpha = 0.7f),
             )
@@ -170,7 +182,7 @@ fun HomeScreen(
         Spacer(modifier = Modifier.weight(1f))
 
         Text(
-            text = "All apps",
+            text = stringResource(R.string.all_apps),
             color = onBackground,
             modifier = Modifier
                 .clickable(onClick = onOpenDrawer)
@@ -178,7 +190,7 @@ fun HomeScreen(
         )
 
         Text(
-            text = "Settings",
+            text = stringResource(R.string.settings_title),
             color = onBackground.copy(alpha = 0.7f),
             modifier = Modifier
                 .clickable(onClick = onOpenSettings)
@@ -187,7 +199,7 @@ fun HomeScreen(
 
         if (!accessibilityEnabled) {
             Text(
-                text = "Enable Accessibility for lock & notification gestures",
+                text = stringResource(R.string.enable_accessibility_hint),
                 color = onBackground.copy(alpha = 0.5f),
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier
@@ -198,17 +210,22 @@ fun HomeScreen(
     }
 }
 
+@Composable
 private fun formatScreenTime(millis: Long): String {
     val totalMinutes = millis / 60_000
     val hours = totalMinutes / 60
     val minutes = totalMinutes % 60
-    return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
+    return if (hours > 0) {
+        stringResource(R.string.duration_hours_minutes, hours, minutes)
+    } else {
+        stringResource(R.string.duration_minutes, minutes)
+    }
 }
 
 private fun toastAccessibilityNeeded(context: Context, action: String) {
     Toast.makeText(
         context,
-        "Enable Quiet's Accessibility service in Settings to $action",
+        context.getString(R.string.enable_accessibility_toast, action),
         Toast.LENGTH_SHORT,
     ).show()
 }

@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -156,7 +157,7 @@ private fun AppRoot(homePressCount: Int) {
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = "Quiet isn't your home screen yet.",
+                    text = stringResource(R.string.not_default_launcher_message),
                     color = MaterialTheme.colorScheme.onBackground,
                 )
                 Button(
@@ -165,7 +166,7 @@ private fun AppRoot(homePressCount: Int) {
                     },
                     modifier = Modifier.padding(top = 16.dp),
                 ) {
-                    Text("Set as default")
+                    Text(stringResource(R.string.set_as_default))
                 }
             }
         } else if (gesturePickSlot != null) {

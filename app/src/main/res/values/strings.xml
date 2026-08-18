@@ -2,4 +2,120 @@
 <resources>
     <string name="app_name">Quiet</string>
     <string name="accessibility_service_description">Lets Quiet lock the screen and open the notification shade from home-screen gestures, and show a friction screen when you open an app you\'ve chosen to add friction to. Quiet does not read screen content.</string>
+
+    <!-- Common -->
+    <string name="back">Back</string>
+    <string name="remove">Remove</string>
+    <string name="save">Save</string>
+    <string name="reset">Reset</string>
+    <string name="clear">Clear</string>
+    <string name="not_set">Not set</string>
+    <string name="off">Off</string>
+    <string name="on">On</string>
+    <string name="duration_hours_minutes">%1$dh %2$dm</string>
+    <string name="duration_minutes">%1$dm</string>
+
+    <!-- MainActivity -->
+    <string name="not_default_launcher_message">Quiet isn\'t your home screen yet.</string>
+    <string name="set_as_default">Set as default</string>
+
+    <!-- Drawer -->
+    <string name="choose_app_for_swipe_left">Choose app for swipe left</string>
+    <string name="choose_app_for_swipe_right">Choose app for swipe right</string>
+    <string name="search_hint">Search</string>
+    <string name="remove_from_favorites">Remove from favorites</string>
+    <string name="pin_to_favorites">Pin to favorites</string>
+    <string name="rename">Rename</string>
+    <string name="unhide">Unhide</string>
+    <string name="hide">Hide</string>
+    <string name="set_as_swipe_left_app">Set as swipe-left app</string>
+    <string name="set_as_swipe_right_app">Set as swipe-right app</string>
+    <string name="remove_friction">Remove friction</string>
+    <string name="add_friction">Add friction</string>
+    <string name="unmute_notifications">Unmute notifications</string>
+    <string name="mute_notifications">Mute notifications</string>
+    <string name="app_info">App info</string>
+    <string name="uninstall">Uninstall</string>
+
+    <!-- Home -->
+    <string name="battery_percent">%1$d%%</string>
+    <string name="screen_time_today">Screen time today: %1$s</string>
+    <string name="screen_time_grant_access">Screen time: grant Usage access</string>
+    <string name="all_apps">All apps</string>
+    <string name="settings_title">Settings</string>
+    <string name="enable_accessibility_hint">Enable Accessibility for lock &amp; notification gestures</string>
+    <string name="no_swipe_left_app_toast">No swipe-left app set — long-press an app in the drawer</string>
+    <string name="no_swipe_right_app_toast">No swipe-right app set — long-press an app in the drawer</string>
+    <string name="enable_accessibility_toast">Enable Quiet\'s Accessibility service in Settings to %1$s</string>
+    <string name="action_lock_the_screen">lock the screen</string>
+    <string name="action_open_notifications">open notifications</string>
+    <plurals name="muted_count_today">
+        <item quantity="one">%1$d notification muted today</item>
+        <item quantity="other">%1$d notifications muted today</item>
+    </plurals>
+
+    <!-- Settings -->
+    <string name="theme_label">Theme</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="font_label">Font</string>
+    <string name="font_sans">Sans</string>
+    <string name="font_monospace">Monospace</string>
+    <string name="text_size_label">Text size</string>
+    <string name="text_size_small">Small</string>
+    <string name="text_size_medium">Medium</string>
+    <string name="text_size_large">Large</string>
+    <string name="alignment_label">Alignment</string>
+    <string name="alignment_left">Left</string>
+    <string name="alignment_center">Center</string>
+    <string name="gestures_section">Gestures</string>
+    <string name="swipe_left_label">Swipe left</string>
+    <string name="swipe_right_label">Swipe right</string>
+    <string name="friction_section">Friction</string>
+    <string name="friction_empty_hint">Long-press an app in the drawer to add friction</string>
+    <string name="delay_off">Delay: off</string>
+    <string name="delay_seconds">Delay: %1$ds</string>
+    <string name="daily_limit_none">Daily limit: none</string>
+    <string name="daily_limit_value">Daily limit: %1$d</string>
+    <string name="focus_schedules_section">Focus schedules</string>
+    <string name="focus_schedules_hint">During these windows, friction apps get a longer delay and no \"Continue\"</string>
+    <string name="add_schedule">Add schedule</string>
+    <string name="schedule_time_range">%1$02d:00–%2$02d:00</string>
+    <string name="schedule_start">Start</string>
+    <string name="schedule_end">End</string>
+    <string name="notifications_section">Notifications</string>
+    <string name="grant_notification_access">Grant Notification access to mute apps</string>
+    <string name="muted_empty_hint">Long-press an app in the drawer to mute it</string>
+    <string name="muted_count_on_home_label">Muted count on home</string>
+    <string name="grayscale_section">Grayscale</string>
+    <string name="grayscale_permission_hint">Grayscale needs a one-time permission grant over ADB — Settings has no UI for it:</string>
+    <string name="system_wide_grayscale_label">System-wide grayscale</string>
+    <string name="usage_section">Usage</string>
+    <string name="screen_time_on_home_label">Screen time on home</string>
+    <string name="view_usage_stats">View usage stats</string>
+    <string-array name="day_abbreviations">
+        <item>M</item>
+        <item>T</item>
+        <item>W</item>
+        <item>T</item>
+        <item>F</item>
+        <item>S</item>
+        <item>S</item>
+    </string-array>
+
+    <!-- Friction -->
+    <string name="blocked_during_focus_time">Blocked during focus time</string>
+    <string name="daily_limit_reached">Daily limit reached</string>
+    <string name="take_a_breath">Take a breath.</string>
+    <string name="close">Close</string>
+    <string name="continue_action">Continue</string>
+
+    <!-- Usage -->
+    <string name="today_title">Today</string>
+    <string name="grant_usage_access">Grant Usage access to see screen time</string>
+    <plurals name="unlocks_count">
+        <item quantity="one">%1$d unlock</item>
+        <item quantity="other">%1$d unlocks</item>
+    </plurals>
 </resources>

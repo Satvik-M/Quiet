@@ -17,12 +17,15 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.satvikm.quiet.R
 import com.satvikm.quiet.util.usageAccessSettingsIntent
 
 @Composable
@@ -50,7 +53,7 @@ fun UsageScreen(onBack: () -> Unit, viewModel: UsageViewModel = hiltViewModel())
             .padding(24.dp),
     ) {
         Text(
-            text = "Back",
+            text = stringResource(R.string.back),
             color = onBackground,
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier
@@ -58,11 +61,11 @@ fun UsageScreen(onBack: () -> Unit, viewModel: UsageViewModel = hiltViewModel())
                 .padding(bottom = 24.dp),
         )
 
-        Text(text = "Today", color = onBackground, style = MaterialTheme.typography.headlineSmall)
+        Text(text = stringResource(R.string.today_title), color = onBackground, style = MaterialTheme.typography.headlineSmall)
 
         if (!granted) {
             Text(
-                text = "Grant Usage access to see screen time",
+                text = stringResource(R.string.grant_usage_access),
                 color = onBackground.copy(alpha = 0.6f),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier
@@ -79,7 +82,7 @@ fun UsageScreen(onBack: () -> Unit, viewModel: UsageViewModel = hiltViewModel())
             modifier = Modifier.padding(top = 16.dp),
         )
         Text(
-            text = "${daily.unlockCount} unlocks",
+            text = pluralStringResource(R.plurals.unlocks_count, daily.unlockCount, daily.unlockCount),
             color = onBackground.copy(alpha = 0.6f),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(bottom = 24.dp),
@@ -100,9 +103,14 @@ fun UsageScreen(onBack: () -> Unit, viewModel: UsageViewModel = hiltViewModel())
     }
 }
 
+@Composable
 private fun formatDuration(millis: Long): String {
     val totalMinutes = millis / 60_000
     val hours = totalMinutes / 60
     val minutes = totalMinutes % 60
-    return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
+    return if (hours > 0) {
+        stringResource(R.string.duration_hours_minutes, hours, minutes)
+    } else {
+        stringResource(R.string.duration_minutes, minutes)
+    }
 }

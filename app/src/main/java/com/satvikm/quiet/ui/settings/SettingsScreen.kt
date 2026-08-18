@@ -20,12 +20,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.satvikm.quiet.R
 import com.satvikm.quiet.data.focus.FocusScheduleEntity
 import com.satvikm.quiet.data.settings.AppFontFamily
 import com.satvikm.quiet.data.settings.FontSize
@@ -82,7 +85,7 @@ fun SettingsScreen(
             .padding(24.dp),
     ) {
         Text(
-            text = "Back",
+            text = stringResource(R.string.back),
             color = onBackground,
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier
@@ -90,61 +93,61 @@ fun SettingsScreen(
                 .padding(bottom = 24.dp),
         )
 
-        Text(text = "Settings", color = onBackground, style = MaterialTheme.typography.headlineSmall)
+        Text(text = stringResource(R.string.settings_title), color = onBackground, style = MaterialTheme.typography.headlineSmall)
 
         SettingRow(
-            label = "Theme",
-            options = listOf("System", "Light", "Dark"),
+            label = stringResource(R.string.theme_label),
+            options = listOf(stringResource(R.string.theme_system), stringResource(R.string.theme_light), stringResource(R.string.theme_dark)),
             selectedIndex = themeMode.ordinal,
             onSelect = { viewModel.setThemeMode(ThemeMode.entries[it]) },
         )
         SettingRow(
-            label = "Font",
-            options = listOf("Sans", "Monospace"),
+            label = stringResource(R.string.font_label),
+            options = listOf(stringResource(R.string.font_sans), stringResource(R.string.font_monospace)),
             selectedIndex = fontFamily.ordinal,
             onSelect = { viewModel.setFontFamily(AppFontFamily.entries[it]) },
         )
         SettingRow(
-            label = "Text size",
-            options = listOf("Small", "Medium", "Large"),
+            label = stringResource(R.string.text_size_label),
+            options = listOf(stringResource(R.string.text_size_small), stringResource(R.string.text_size_medium), stringResource(R.string.text_size_large)),
             selectedIndex = fontSize.ordinal,
             onSelect = { viewModel.setFontSize(FontSize.entries[it]) },
         )
         SettingRow(
-            label = "Alignment",
-            options = listOf("Left", "Center"),
+            label = stringResource(R.string.alignment_label),
+            options = listOf(stringResource(R.string.alignment_left), stringResource(R.string.alignment_center)),
             selectedIndex = alignment.ordinal,
             onSelect = { viewModel.setAlignment(HomeAlignment.entries[it]) },
         )
 
         Text(
-            text = "Gestures",
+            text = stringResource(R.string.gestures_section),
             color = onBackground.copy(alpha = 0.6f),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 20.dp, bottom = 4.dp),
         )
         GestureRow(
-            label = "Swipe left",
+            label = stringResource(R.string.swipe_left_label),
             app = swipeLeftApp,
             onChange = { onPickGestureApp(GestureSlot.SWIPE_LEFT) },
             onClear = { viewModel.clearGestureApp(GestureSlot.SWIPE_LEFT) },
         )
         GestureRow(
-            label = "Swipe right",
+            label = stringResource(R.string.swipe_right_label),
             app = swipeRightApp,
             onChange = { onPickGestureApp(GestureSlot.SWIPE_RIGHT) },
             onClear = { viewModel.clearGestureApp(GestureSlot.SWIPE_RIGHT) },
         )
 
         Text(
-            text = "Friction",
+            text = stringResource(R.string.friction_section),
             color = onBackground.copy(alpha = 0.6f),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 20.dp, bottom = 4.dp),
         )
         if (blockedApps.isEmpty()) {
             Text(
-                text = "Long-press an app in the drawer to add friction",
+                text = stringResource(R.string.friction_empty_hint),
                 color = onBackground.copy(alpha = 0.5f),
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -160,13 +163,13 @@ fun SettingsScreen(
         }
 
         Text(
-            text = "Focus schedules",
+            text = stringResource(R.string.focus_schedules_section),
             color = onBackground.copy(alpha = 0.6f),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 20.dp, bottom = 4.dp),
         )
         Text(
-            text = "During these windows, friction apps get a longer delay and no \"Continue\"",
+            text = stringResource(R.string.focus_schedules_hint),
             color = onBackground.copy(alpha = 0.5f),
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(bottom = 8.dp),
@@ -182,7 +185,7 @@ fun SettingsScreen(
             )
         }
         Text(
-            text = "Add schedule",
+            text = stringResource(R.string.add_schedule),
             color = onBackground,
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier
@@ -191,14 +194,14 @@ fun SettingsScreen(
         )
 
         Text(
-            text = "Notifications",
+            text = stringResource(R.string.notifications_section),
             color = onBackground.copy(alpha = 0.6f),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 20.dp, bottom = 4.dp),
         )
         if (!notificationAccessGranted) {
             Text(
-                text = "Grant Notification access to mute apps",
+                text = stringResource(R.string.grant_notification_access),
                 color = onBackground.copy(alpha = 0.5f),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier
@@ -207,7 +210,7 @@ fun SettingsScreen(
             )
         } else if (mutedApps.isEmpty()) {
             Text(
-                text = "Long-press an app in the drawer to mute it",
+                text = stringResource(R.string.muted_empty_hint),
                 color = onBackground.copy(alpha = 0.5f),
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -217,21 +220,21 @@ fun SettingsScreen(
             }
         }
         SettingRow(
-            label = "Muted count on home",
-            options = listOf("Off", "On"),
+            label = stringResource(R.string.muted_count_on_home_label),
+            options = listOf(stringResource(R.string.off), stringResource(R.string.on)),
             selectedIndex = if (showMutedCount) 1 else 0,
             onSelect = { viewModel.setShowMutedCount(it == 1) },
         )
 
         Text(
-            text = "Grayscale",
+            text = stringResource(R.string.grayscale_section),
             color = onBackground.copy(alpha = 0.6f),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 20.dp, bottom = 4.dp),
         )
         if (!writeSecureSettingsGranted) {
             Text(
-                text = "Grayscale needs a one-time permission grant over ADB — Settings has no UI for it:",
+                text = stringResource(R.string.grayscale_permission_hint),
                 color = onBackground.copy(alpha = 0.5f),
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -243,27 +246,27 @@ fun SettingsScreen(
             )
         } else {
             SettingRow(
-                label = "System-wide grayscale",
-                options = listOf("Off", "On"),
+                label = stringResource(R.string.system_wide_grayscale_label),
+                options = listOf(stringResource(R.string.off), stringResource(R.string.on)),
                 selectedIndex = if (grayscaleEnabled) 1 else 0,
                 onSelect = { viewModel.setGrayscale(it == 1) },
             )
         }
 
         Text(
-            text = "Usage",
+            text = stringResource(R.string.usage_section),
             color = onBackground.copy(alpha = 0.6f),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 20.dp, bottom = 4.dp),
         )
         SettingRow(
-            label = "Screen time on home",
-            options = listOf("Off", "On"),
+            label = stringResource(R.string.screen_time_on_home_label),
+            options = listOf(stringResource(R.string.off), stringResource(R.string.on)),
             selectedIndex = if (showScreenTime) 1 else 0,
             onSelect = { viewModel.setShowScreenTime(it == 1) },
         )
         Text(
-            text = "View usage stats",
+            text = stringResource(R.string.view_usage_stats),
             color = onBackground,
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier
@@ -319,7 +322,7 @@ private fun BlockedAppRow(
                 modifier = Modifier.weight(1f),
             )
             Text(
-                text = "Remove",
+                text = stringResource(R.string.remove),
                 color = onBackground.copy(alpha = 0.5f),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.clickable(onClick = onRemove),
@@ -327,7 +330,7 @@ private fun BlockedAppRow(
         }
         Row(modifier = Modifier.padding(top = 4.dp)) {
             Text(
-                text = "Delay: ${if (app.delaySeconds == 0) "off" else "${app.delaySeconds}s"}",
+                text = if (app.delaySeconds == 0) stringResource(R.string.delay_off) else stringResource(R.string.delay_seconds, app.delaySeconds),
                 color = onBackground.copy(alpha = 0.6f),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier
@@ -335,7 +338,7 @@ private fun BlockedAppRow(
                     .padding(end = 20.dp),
             )
             Text(
-                text = "Daily limit: ${app.dailyOpenLimit?.toString() ?: "none"}",
+                text = app.dailyOpenLimit?.let { stringResource(R.string.daily_limit_value, it) } ?: stringResource(R.string.daily_limit_none),
                 color = onBackground.copy(alpha = 0.6f),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.clickable(onClick = onCycleDailyLimit),
@@ -343,8 +346,6 @@ private fun BlockedAppRow(
         }
     }
 }
-
-private val DAY_LABELS = listOf("M", "T", "W", "T", "F", "S", "S")
 
 @Composable
 private fun FocusScheduleRow(
@@ -356,13 +357,14 @@ private fun FocusScheduleRow(
     onRemove: () -> Unit,
 ) {
     val onBackground = MaterialTheme.colorScheme.onBackground
+    val dayLabels = stringArrayResource(R.array.day_abbreviations)
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "%02d:00–%02d:00".format(schedule.startHour, schedule.endHour),
+                text = stringResource(R.string.schedule_time_range, schedule.startHour, schedule.endHour),
                 color = if (schedule.enabled) onBackground else onBackground.copy(alpha = 0.4f),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier
@@ -370,7 +372,7 @@ private fun FocusScheduleRow(
                     .clickable(onClick = onToggleEnabled),
             )
             Text(
-                text = "Remove",
+                text = stringResource(R.string.remove),
                 color = onBackground.copy(alpha = 0.5f),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.clickable(onClick = onRemove),
@@ -378,7 +380,7 @@ private fun FocusScheduleRow(
         }
         Row(modifier = Modifier.padding(top = 4.dp)) {
             Text(
-                text = "Start",
+                text = stringResource(R.string.schedule_start),
                 color = onBackground.copy(alpha = 0.6f),
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier
@@ -386,14 +388,14 @@ private fun FocusScheduleRow(
                     .padding(end = 16.dp),
             )
             Text(
-                text = "End",
+                text = stringResource(R.string.schedule_end),
                 color = onBackground.copy(alpha = 0.6f),
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.clickable(onClick = onCycleEnd),
             )
         }
         Row(modifier = Modifier.padding(top = 4.dp)) {
-            DAY_LABELS.forEachIndexed { index, dayLabel ->
+            dayLabels.forEachIndexed { index, dayLabel ->
                 val included = (schedule.daysMask and (1 shl index)) != 0
                 Text(
                     text = dayLabel,
@@ -424,7 +426,7 @@ private fun MutedAppRow(app: MutedAppUi, onRemove: () -> Unit) {
             modifier = Modifier.weight(1f),
         )
         Text(
-            text = "Remove",
+            text = stringResource(R.string.remove),
             color = onBackground.copy(alpha = 0.5f),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.clickable(onClick = onRemove),
@@ -453,14 +455,14 @@ private fun GestureRow(
         ) {
             Text(text = label, color = onBackground.copy(alpha = 0.6f), style = MaterialTheme.typography.bodyMedium)
             Text(
-                text = app?.displayLabel ?: "Not set",
+                text = app?.displayLabel ?: stringResource(R.string.not_set),
                 color = onBackground,
                 style = MaterialTheme.typography.titleMedium,
             )
         }
         if (app != null) {
             Text(
-                text = "Clear",
+                text = stringResource(R.string.clear),
                 color = onBackground.copy(alpha = 0.5f),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.clickable(onClick = onClear),

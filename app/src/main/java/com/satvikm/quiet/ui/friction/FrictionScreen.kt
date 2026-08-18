@@ -19,7 +19,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.satvikm.quiet.R
 import com.satvikm.quiet.data.block.BlocklistRepository
 import com.satvikm.quiet.data.focus.FocusScheduleRepository
 import kotlinx.coroutines.delay
@@ -79,12 +81,12 @@ fun FrictionScreen(
 
         when {
             focusBlocked -> Text(
-                text = "Blocked during focus time",
+                text = stringResource(R.string.blocked_during_focus_time),
                 color = onBackground.copy(alpha = 0.7f),
                 style = MaterialTheme.typography.bodyLarge,
             )
             dailyLimitReached -> Text(
-                text = "Daily limit reached",
+                text = stringResource(R.string.daily_limit_reached),
                 color = onBackground.copy(alpha = 0.7f),
                 style = MaterialTheme.typography.bodyLarge,
             )
@@ -94,7 +96,7 @@ fun FrictionScreen(
                 color = onBackground,
             )
             else -> Text(
-                text = "Take a breath.",
+                text = stringResource(R.string.take_a_breath),
                 color = onBackground.copy(alpha = 0.7f),
                 style = MaterialTheme.typography.bodyLarge,
             )
@@ -103,7 +105,7 @@ fun FrictionScreen(
         Spacer(modifier = Modifier.height(48.dp))
 
         Text(
-            text = "Close",
+            text = stringResource(R.string.close),
             style = MaterialTheme.typography.titleLarge,
             color = onBackground,
             modifier = Modifier
@@ -113,7 +115,7 @@ fun FrictionScreen(
 
         if (!focusBlocked && !dailyLimitReached && secondsLeft == 0) {
             Text(
-                text = "Continue",
+                text = stringResource(R.string.continue_action),
                 style = MaterialTheme.typography.titleLarge,
                 color = onBackground.copy(alpha = 0.6f),
                 modifier = Modifier

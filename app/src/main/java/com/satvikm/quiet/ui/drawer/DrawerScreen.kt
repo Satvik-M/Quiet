@@ -34,11 +34,13 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.satvikm.quiet.R
 import com.satvikm.quiet.data.settings.GestureSlot
 import com.satvikm.quiet.domain.model.LaunchableApp
 import com.satvikm.quiet.util.appInfoIntent
@@ -73,7 +75,9 @@ fun DrawerScreen(
     Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
         if (pickForGesture != null) {
             Text(
-                text = "Choose app for swipe ${if (pickForGesture == GestureSlot.SWIPE_LEFT) "left" else "right"}",
+                text = stringResource(
+                    if (pickForGesture == GestureSlot.SWIPE_LEFT) R.string.choose_app_for_swipe_left else R.string.choose_app_for_swipe_right,
+                ),
                 color = onBackground.copy(alpha = 0.6f),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
@@ -101,7 +105,7 @@ fun DrawerScreen(
             decorationBox = { innerTextField ->
                 if (query.isEmpty()) {
                     Text(
-                        text = "Search",
+                        text = stringResource(R.string.search_hint),
                         color = onBackground.copy(alpha = 0.5f),
                         style = MaterialTheme.typography.titleLarge,
                     )
@@ -142,63 +146,63 @@ fun DrawerScreen(
                         onDismissRequest = { menuTarget = null },
                     ) {
                         DropdownMenuItem(
-                            text = { Text(if (app.id in favoriteIds) "Remove from favorites" else "Pin to favorites") },
+                            text = { Text(stringResource(if (app.id in favoriteIds) R.string.remove_from_favorites else R.string.pin_to_favorites)) },
                             onClick = {
                                 viewModel.toggleFavorite(app)
                                 menuTarget = null
                             },
                         )
                         DropdownMenuItem(
-                            text = { Text("Rename") },
+                            text = { Text(stringResource(R.string.rename)) },
                             onClick = {
                                 menuTarget = null
                                 renameTarget = app
                             },
                         )
                         DropdownMenuItem(
-                            text = { Text(if (app.isHidden) "Unhide" else "Hide") },
+                            text = { Text(stringResource(if (app.isHidden) R.string.unhide else R.string.hide)) },
                             onClick = {
                                 viewModel.setHidden(app, !app.isHidden)
                                 menuTarget = null
                             },
                         )
                         DropdownMenuItem(
-                            text = { Text("Set as swipe-left app") },
+                            text = { Text(stringResource(R.string.set_as_swipe_left_app)) },
                             onClick = {
                                 viewModel.setGestureApp(GestureSlot.SWIPE_LEFT, app)
                                 menuTarget = null
                             },
                         )
                         DropdownMenuItem(
-                            text = { Text("Set as swipe-right app") },
+                            text = { Text(stringResource(R.string.set_as_swipe_right_app)) },
                             onClick = {
                                 viewModel.setGestureApp(GestureSlot.SWIPE_RIGHT, app)
                                 menuTarget = null
                             },
                         )
                         DropdownMenuItem(
-                            text = { Text(if (app.packageName in blockedPackageNames) "Remove friction" else "Add friction") },
+                            text = { Text(stringResource(if (app.packageName in blockedPackageNames) R.string.remove_friction else R.string.add_friction)) },
                             onClick = {
                                 viewModel.setBlocked(app, app.packageName !in blockedPackageNames)
                                 menuTarget = null
                             },
                         )
                         DropdownMenuItem(
-                            text = { Text(if (app.packageName in mutedPackageNames) "Unmute notifications" else "Mute notifications") },
+                            text = { Text(stringResource(if (app.packageName in mutedPackageNames) R.string.unmute_notifications else R.string.mute_notifications)) },
                             onClick = {
                                 viewModel.setMuted(app, app.packageName !in mutedPackageNames)
                                 menuTarget = null
                             },
                         )
                         DropdownMenuItem(
-                            text = { Text("App info") },
+                            text = { Text(stringResource(R.string.app_info)) },
                             onClick = {
                                 menuTarget = null
                                 context.startActivity(appInfoIntent(app.packageName))
                             },
                         )
                         DropdownMenuItem(
-                            text = { Text("Uninstall") },
+                            text = { Text(stringResource(R.string.uninstall)) },
                             onClick = {
                                 menuTarget = null
                                 requestUninstall(context, app.packageName)
@@ -228,15 +232,15 @@ private fun RenameDialog(app: LaunchableApp, onConfirm: (String?) -> Unit, onDis
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Rename") },
+        title = { Text(stringResource(R.string.rename)) },
         text = {
             TextField(value = text, onValueChange = { text = it }, singleLine = true)
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(text) }) { Text("Save") }
+            TextButton(onClick = { onConfirm(text) }) { Text(stringResource(R.string.save)) }
         },
         dismissButton = {
-            TextButton(onClick = { onConfirm(null) }) { Text("Reset") }
+            TextButton(onClick = { onConfirm(null) }) { Text(stringResource(R.string.reset)) }
         },
     )
 }
