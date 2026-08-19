@@ -6,8 +6,10 @@ import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.os.Build
 import android.os.Process
+import com.satvikm.quiet.data.apps.AppRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.ZoneId
@@ -25,6 +27,7 @@ data class DailyUsage(
 @Singleton
 class UsageRepository @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val appRepository: AppRepository,
 ) {
     private val appOps: AppOpsManager
         get() = context.getSystemService(AppOpsManager::class.java)
@@ -78,10 +81,17 @@ class UsageRepository @Inject constructor(
             perApp[packageName] = (perApp[packageName] ?: 0L) + (now - start)
         }
 
+        // Raw events include system UI components (status bar, keyguard, the
+        // system launcher's brief flashes during app switches, etc.) that aren't
+        // apps the user thinks of as "using" — only count packages with a real
+        // launcher entry, in both the per-app breakdown and the total.
+        val launchablePackages = appRepository.apps.first().map { it.packageName }.toSet()
+        val filteredPerApp = perApp.filterKeys { it in launchablePackages }
+
         DailyUsage(
-            totalMillis = perApp.values.sum(),
+            totalMillis = filteredPerApp.values.sum(),
             unlockCount = unlockCount,
-            perApp = perApp.map { (packageName, millis) -> AppUsage(packageName, millis) }
+            perApp = filteredPerApp.map { (packageName, millis) -> AppUsage(packageName, millis) }
                 .sortedByDescending { it.foregroundMillis },
         )
     }
