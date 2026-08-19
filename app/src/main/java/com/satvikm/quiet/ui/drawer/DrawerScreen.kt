@@ -68,6 +68,7 @@ fun DrawerScreen(
     var renameTarget by remember { mutableStateOf<LaunchableApp?>(null) }
 
     LaunchedEffect(Unit) {
+        viewModel.onQueryChange("")
         focusRequester.requestFocus()
         keyboardController?.show()
     }
