@@ -61,6 +61,7 @@ class SettingsViewModel @Inject constructor(
     val showScreenTime: StateFlow<Boolean> = settingsRepository.showScreenTime.stateIn(viewModelScope, started, false)
     val showMutedCount: StateFlow<Boolean> = settingsRepository.showMutedCount.stateIn(viewModelScope, started, false)
     val grayscaleEnabled: StateFlow<Boolean> = settingsRepository.grayscaleEnabled.stateIn(viewModelScope, started, false)
+    val focusAutomationEnabled: StateFlow<Boolean> = settingsRepository.focusAutomationEnabled.stateIn(viewModelScope, started, false)
 
     val focusSchedules: StateFlow<List<FocusScheduleEntity>> = focusScheduleRepository.schedules
         .stateIn(viewModelScope, started, emptyList())
@@ -154,6 +155,10 @@ class SettingsViewModel @Inject constructor(
 
     fun addFocusSchedule() {
         viewModelScope.launch { focusScheduleRepository.addDefault() }
+    }
+
+    fun setFocusAutomationEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setFocusAutomationEnabled(enabled) }
     }
 
     fun cycleStartHour(schedule: FocusScheduleEntity) {

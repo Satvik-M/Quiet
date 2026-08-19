@@ -7,6 +7,8 @@ import com.satvikm.quiet.data.block.BlockedAppDao
 import com.satvikm.quiet.data.block.BlockedAppEntity
 import com.satvikm.quiet.data.favorites.FavoriteDao
 import com.satvikm.quiet.data.favorites.FavoriteEntity
+import com.satvikm.quiet.data.focus.FocusAutoMuteDao
+import com.satvikm.quiet.data.focus.FocusAutoMutedAppEntity
 import com.satvikm.quiet.data.focus.FocusScheduleDao
 import com.satvikm.quiet.data.focus.FocusScheduleEntity
 import com.satvikm.quiet.data.notifications.MutedAppDao
@@ -23,8 +25,9 @@ import com.satvikm.quiet.data.notifications.MutedNotificationEntity
         MutedAppEntity::class,
         MutedNotificationEntity::class,
         FocusScheduleEntity::class,
+        FocusAutoMutedAppEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -34,4 +37,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun blockedAppDao(): BlockedAppDao
     abstract fun mutedAppDao(): MutedAppDao
     abstract fun focusScheduleDao(): FocusScheduleDao
+    abstract fun focusAutoMuteDao(): FocusAutoMuteDao
 }

@@ -60,6 +60,7 @@ fun SettingsScreen(
     val showMutedCount by viewModel.showMutedCount.collectAsStateWithLifecycle()
     val grayscaleEnabled by viewModel.grayscaleEnabled.collectAsStateWithLifecycle()
     val focusSchedules by viewModel.focusSchedules.collectAsStateWithLifecycle()
+    val focusAutomationEnabled by viewModel.focusAutomationEnabled.collectAsStateWithLifecycle()
     val onBackground = MaterialTheme.colorScheme.onBackground
 
     val context = LocalContext.current
@@ -191,6 +192,18 @@ fun SettingsScreen(
             modifier = Modifier
                 .clickable(onClick = viewModel::addFocusSchedule)
                 .padding(top = 4.dp, bottom = 8.dp),
+        )
+        SettingRow(
+            label = stringResource(R.string.focus_automation_label),
+            options = listOf(stringResource(R.string.off), stringResource(R.string.on)),
+            selectedIndex = if (focusAutomationEnabled) 1 else 0,
+            onSelect = { viewModel.setFocusAutomationEnabled(it == 1) },
+        )
+        Text(
+            text = stringResource(R.string.focus_automation_hint),
+            color = onBackground.copy(alpha = 0.5f),
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(bottom = 8.dp),
         )
 
         Text(

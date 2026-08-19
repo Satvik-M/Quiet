@@ -3,17 +3,23 @@ package com.satvikm.quiet.service
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.os.SystemClock
+import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import com.satvikm.quiet.data.block.BlockedAppEntity
 import com.satvikm.quiet.data.block.BlocklistRepository
+import com.satvikm.quiet.data.focus.FocusModeOrchestrator
+import com.satvikm.quiet.data.focus.FocusScheduleRepository
 import com.satvikm.quiet.ui.friction.FrictionActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -28,6 +34,8 @@ import javax.inject.Inject
 class GestureAccessibilityService : AccessibilityService() {
 
     @Inject lateinit var blocklistRepository: BlocklistRepository
+    @Inject lateinit var focusScheduleRepository: FocusScheduleRepository
+    @Inject lateinit var focusModeOrchestrator: FocusModeOrchestrator
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var blockedApps: Map<String, BlockedAppEntity> = emptyMap()
@@ -40,8 +48,10 @@ class GestureAccessibilityService : AccessibilityService() {
         var instance: GestureAccessibilityService? = null
             private set
 
+        private const val TAG = "GestureAccessibilityService"
         private const val DEBOUNCE_MS = 300L
         const val GRACE_DURATION_MS = 2 * 60_000L
+        private const val FOCUS_POLL_INTERVAL_MS = 60_000L
     }
 
     /** Called by FrictionActivity when the user taps Continue, so the just-revealed app isn't immediately re-blocked. */
@@ -54,6 +64,17 @@ class GestureAccessibilityService : AccessibilityService() {
         blocklistRepository.blockedApps
             .onEach { blockedApps = it.associateBy { entity -> entity.packageName } }
             .launchIn(serviceScope)
+
+        serviceScope.launch {
+            while (isActive) {
+                try {
+                    focusModeOrchestrator.poll(focusScheduleRepository.isFocusActiveNow())
+                } catch (e: Exception) {
+                    Log.w(TAG, "Focus mode poll failed", e)
+                }
+                delay(FOCUS_POLL_INTERVAL_MS)
+            }
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
