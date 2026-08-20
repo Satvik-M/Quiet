@@ -62,8 +62,13 @@ class HomeViewModel @Inject constructor(
         initialValue = 0,
     )
 
-    val focusActive: StateFlow<Boolean> = combine(focusScheduleRepository.schedules, currentTime) { schedules, now ->
-        FocusScheduleRepository.isActiveAt(schedules, now)
+    val manualFocusActive: StateFlow<Boolean> = settingsRepository.manualFocusActive.stateIn(viewModelScope, started, false)
+    val focusActive: StateFlow<Boolean> = combine(
+        focusScheduleRepository.schedules,
+        currentTime,
+        manualFocusActive,
+    ) { schedules, now, manual ->
+        manual || FocusScheduleRepository.isActiveAt(schedules, now)
     }.stateIn(viewModelScope, started, false)
     val showFocusStatus: StateFlow<Boolean> = settingsRepository.showFocusStatus.stateIn(viewModelScope, started, false)
 
@@ -108,5 +113,9 @@ class HomeViewModel @Inject constructor(
 
     fun refreshMutedCount() {
         viewModelScope.launch { _mutedCountToday.value = notificationMuteRepository.mutedCountToday() }
+    }
+
+    fun toggleFocusNow() {
+        viewModelScope.launch { settingsRepository.setManualFocusActive(!manualFocusActive.value) }
     }
 }

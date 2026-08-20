@@ -88,6 +88,9 @@
     <string name="focus_automation_hint">While a schedule is active: grayscale turns on and notifications are muted, except favorites and your phone/SMS app</string>
     <string name="focus_status_on_home_label">Focus status on home</string>
     <string name="focus_active_home">Focus active</string>
+    <string name="focus_now">Focus now</string>
+    <string name="end_focus_now">End focus</string>
+    <string name="quick_settings_focus_tile_label">Focus</string>
     <string name="hidden_apps_section">Hidden apps</string>
     <string name="hidden_apps_empty_hint">Long-press an app in the drawer to hide it</string>
     <string name="notifications_section">Notifications</string>

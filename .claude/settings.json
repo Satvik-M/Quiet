@@ -4,7 +4,10 @@
       "Bash(command -v adb)",
       "Bash(adb devices *)",
       "Bash(/opt/homebrew/share/android-commandlinetools/platform-tools/adb shell *)",
-      "Bash(/opt/homebrew/share/android-commandlinetools/platform-tools/adb pull *)"
+      "Bash(/opt/homebrew/share/android-commandlinetools/platform-tools/adb pull *)",
+      "Bash(./gradlew assembleDebug -q)",
+      "Bash(/opt/homebrew/share/android-commandlinetools/platform-tools/adb -s 53171FDAP001AW shell input tap 479 1267)",
+      "Bash(/opt/homebrew/share/android-commandlinetools/platform-tools/adb -s 53171FDAP001AW exec-out screencap -p)"
     ]
   }
 }

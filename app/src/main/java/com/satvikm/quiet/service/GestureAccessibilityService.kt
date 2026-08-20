@@ -73,6 +73,10 @@ class GestureAccessibilityService : AccessibilityService() {
             .onEach { pollFocusNow() }
             .launchIn(serviceScope)
 
+        settingsRepository.manualFocusActive
+            .onEach { pollFocusNow() }
+            .launchIn(serviceScope)
+
         serviceScope.launch {
             while (isActive) {
                 pollFocusNow()

@@ -29,9 +29,11 @@ class FocusModeOrchestrator @Inject constructor(
     /** Whether grayscale/auto-mute are currently applied — tracked separately from the schedule's own active/inactive state, since automation can be toggled off mid-window and effects must revert immediately rather than waiting for the schedule to end. */
     private var effectsApplied = false
 
-    /** Reconciles applied effects against the schedule state and the automation toggle on every poll tick — call with the schedule's current active/inactive state. */
-    suspend fun poll(focusActive: Boolean) {
-        val shouldApply = focusActive && settingsRepository.focusAutomationEnabled.first()
+    /** Reconciles applied effects against the schedule state, the automation toggle, and the ad-hoc manual override on every poll tick — call with the schedule's current active/inactive state. */
+    suspend fun poll(scheduleActive: Boolean) {
+        val manualActive = settingsRepository.manualFocusActive.first()
+        val scheduleApplies = scheduleActive && settingsRepository.focusAutomationEnabled.first()
+        val shouldApply = manualActive || scheduleApplies
         if (shouldApply == effectsApplied) return
         effectsApplied = shouldApply
         if (shouldApply) enterFocus() else exitFocus()

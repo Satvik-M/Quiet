@@ -77,6 +77,7 @@ fun HomeScreen(
     val mutedCountToday by viewModel.mutedCountToday.collectAsStateWithLifecycle()
     val showFocusStatus by viewModel.showFocusStatus.collectAsStateWithLifecycle()
     val focusActive by viewModel.focusActive.collectAsStateWithLifecycle()
+    val manualFocusActive by viewModel.manualFocusActive.collectAsStateWithLifecycle()
 
     val timeFormatter = remember(context) {
         DateTimeFormatter.ofPattern(if (DateFormat.is24HourFormat(context)) "H:mm" else "h:mm")
@@ -204,6 +205,14 @@ fun HomeScreen(
             color = onBackground.copy(alpha = 0.7f),
             modifier = Modifier
                 .clickable(onClick = onOpenSettings)
+                .padding(vertical = 8.dp),
+        )
+
+        Text(
+            text = stringResource(if (manualFocusActive) R.string.end_focus_now else R.string.focus_now),
+            color = onBackground.copy(alpha = 0.7f),
+            modifier = Modifier
+                .clickable(onClick = viewModel::toggleFocusNow)
                 .padding(vertical = 8.dp),
         )
 

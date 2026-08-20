@@ -32,6 +32,7 @@ class SettingsRepository @Inject constructor(
         val GRAYSCALE_ENABLED = booleanPreferencesKey("grayscale_enabled")
         val FOCUS_AUTOMATION_ENABLED = booleanPreferencesKey("focus_automation_enabled")
         val SHOW_FOCUS_STATUS = booleanPreferencesKey("show_focus_status")
+        val MANUAL_FOCUS_ACTIVE = booleanPreferencesKey("manual_focus_active")
     }
 
     val themeMode: Flow<ThemeMode> = enumFlow(Keys.THEME_MODE, ThemeMode.SYSTEM, ThemeMode::valueOf)
@@ -43,6 +44,8 @@ class SettingsRepository @Inject constructor(
     val grayscaleEnabled: Flow<Boolean> = context.appSettingsDataStore.data.map { it[Keys.GRAYSCALE_ENABLED] ?: false }
     val focusAutomationEnabled: Flow<Boolean> = context.appSettingsDataStore.data.map { it[Keys.FOCUS_AUTOMATION_ENABLED] ?: false }
     val showFocusStatus: Flow<Boolean> = context.appSettingsDataStore.data.map { it[Keys.SHOW_FOCUS_STATUS] ?: false }
+    /** Ad-hoc "Focus now" override — applies focus effects immediately regardless of any schedule, toggled from the home screen or the Quick Settings tile. */
+    val manualFocusActive: Flow<Boolean> = context.appSettingsDataStore.data.map { it[Keys.MANUAL_FOCUS_ACTIVE] ?: false }
 
     suspend fun setThemeMode(mode: ThemeMode) = set(Keys.THEME_MODE, mode.name)
     suspend fun setFontFamily(family: AppFontFamily) = set(Keys.FONT_FAMILY, family.name)
@@ -62,6 +65,9 @@ class SettingsRepository @Inject constructor(
     }
     suspend fun setShowFocusStatus(show: Boolean) {
         context.appSettingsDataStore.edit { it[Keys.SHOW_FOCUS_STATUS] = show }
+    }
+    suspend fun setManualFocusActive(active: Boolean) {
+        context.appSettingsDataStore.edit { it[Keys.MANUAL_FOCUS_ACTIVE] = active }
     }
 
     private fun <T : Enum<T>> enumFlow(
