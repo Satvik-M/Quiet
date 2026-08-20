@@ -9,6 +9,7 @@ import com.satvikm.quiet.data.block.BlockedAppEntity
 import com.satvikm.quiet.data.block.BlocklistRepository
 import com.satvikm.quiet.data.focus.FocusModeOrchestrator
 import com.satvikm.quiet.data.focus.FocusScheduleRepository
+import com.satvikm.quiet.data.settings.SettingsRepository
 import com.satvikm.quiet.ui.friction.FrictionActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -36,6 +37,7 @@ class GestureAccessibilityService : AccessibilityService() {
     @Inject lateinit var blocklistRepository: BlocklistRepository
     @Inject lateinit var focusScheduleRepository: FocusScheduleRepository
     @Inject lateinit var focusModeOrchestrator: FocusModeOrchestrator
+    @Inject lateinit var settingsRepository: SettingsRepository
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var blockedApps: Map<String, BlockedAppEntity> = emptyMap()
@@ -50,13 +52,13 @@ class GestureAccessibilityService : AccessibilityService() {
 
         private const val TAG = "GestureAccessibilityService"
         private const val DEBOUNCE_MS = 300L
-        const val GRACE_DURATION_MS = 2 * 60_000L
         private const val FOCUS_POLL_INTERVAL_MS = 60_000L
     }
 
     /** Called by FrictionActivity when the user taps Continue, so the just-revealed app isn't immediately re-blocked. */
     fun grantGrace(packageName: String) {
-        graceUntilByPackage[packageName] = SystemClock.uptimeMillis() + GRACE_DURATION_MS
+        graceUntilByPackage[packageName] = System.currentTimeMillis() + BlocklistRepository.GRACE_DURATION_MS
+        serviceScope.launch { blocklistRepository.grantGrace(packageName) }
     }
 
     override fun onServiceConnected() {
@@ -65,15 +67,25 @@ class GestureAccessibilityService : AccessibilityService() {
             .onEach { blockedApps = it.associateBy { entity -> entity.packageName } }
             .launchIn(serviceScope)
 
+        serviceScope.launch { graceUntilByPackage.putAll(blocklistRepository.activeGrace()) }
+
+        settingsRepository.focusAutomationEnabled
+            .onEach { pollFocusNow() }
+            .launchIn(serviceScope)
+
         serviceScope.launch {
             while (isActive) {
-                try {
-                    focusModeOrchestrator.poll(focusScheduleRepository.isFocusActiveNow())
-                } catch (e: Exception) {
-                    Log.w(TAG, "Focus mode poll failed", e)
-                }
+                pollFocusNow()
                 delay(FOCUS_POLL_INTERVAL_MS)
             }
+        }
+    }
+
+    private suspend fun pollFocusNow() {
+        try {
+            focusModeOrchestrator.poll(focusScheduleRepository.isFocusActiveNow())
+        } catch (e: Exception) {
+            Log.w(TAG, "Focus mode poll failed", e)
         }
     }
 
@@ -89,7 +101,7 @@ class GestureAccessibilityService : AccessibilityService() {
 
         if (blockedApps[packageName] == null) return
         val graceUntil = graceUntilByPackage[packageName]
-        if (graceUntil != null && now < graceUntil) return
+        if (graceUntil != null && System.currentTimeMillis() < graceUntil) return
 
         startActivity(
             Intent(this, FrictionActivity::class.java)

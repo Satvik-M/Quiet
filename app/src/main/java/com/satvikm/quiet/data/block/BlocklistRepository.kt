@@ -9,8 +9,20 @@ import javax.inject.Singleton
 @Singleton
 class BlocklistRepository @Inject constructor(
     private val dao: BlockedAppDao,
+    private val graceDao: GraceDao,
 ) {
     val blockedApps: Flow<List<BlockedAppEntity>> = dao.observeAll()
+
+    /** Persists a fresh grace window for [packageName], so it survives a service restart. */
+    suspend fun grantGrace(packageName: String) {
+        val now = System.currentTimeMillis()
+        graceDao.deleteExpired(now)
+        graceDao.upsert(GraceEntity(packageName, now + GRACE_DURATION_MS))
+    }
+
+    /** Non-expired grace windows, for the accessibility service to seed its in-memory cache on (re)connect. */
+    suspend fun activeGrace(): Map<String, Long> =
+        graceDao.getAllActive(System.currentTimeMillis()).associate { it.packageName to it.graceUntilMillis }
 
     suspend fun isBlocked(packageName: String): Boolean = dao.get(packageName) != null
 
@@ -36,5 +48,9 @@ class BlocklistRepository @Inject constructor(
             .toInstant()
             .toEpochMilli()
         return dao.countOpensSince(entity.packageName, startOfDay) < limit
+    }
+
+    companion object {
+        const val GRACE_DURATION_MS = 2 * 60_000L
     }
 }

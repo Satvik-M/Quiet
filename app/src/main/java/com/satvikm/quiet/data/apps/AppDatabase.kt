@@ -5,6 +5,8 @@ import androidx.room.RoomDatabase
 import com.satvikm.quiet.data.block.AppOpenEntity
 import com.satvikm.quiet.data.block.BlockedAppDao
 import com.satvikm.quiet.data.block.BlockedAppEntity
+import com.satvikm.quiet.data.block.GraceDao
+import com.satvikm.quiet.data.block.GraceEntity
 import com.satvikm.quiet.data.favorites.FavoriteDao
 import com.satvikm.quiet.data.favorites.FavoriteEntity
 import com.satvikm.quiet.data.focus.FocusAutoMuteDao
@@ -26,8 +28,9 @@ import com.satvikm.quiet.data.notifications.MutedNotificationEntity
         MutedNotificationEntity::class,
         FocusScheduleEntity::class,
         FocusAutoMutedAppEntity::class,
+        GraceEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -38,4 +41,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun mutedAppDao(): MutedAppDao
     abstract fun focusScheduleDao(): FocusScheduleDao
     abstract fun focusAutoMuteDao(): FocusAutoMuteDao
+    abstract fun graceDao(): GraceDao
 }

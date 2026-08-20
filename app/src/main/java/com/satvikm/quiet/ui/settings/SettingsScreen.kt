@@ -1,15 +1,20 @@
 package com.satvikm.quiet.ui.settings
 
+import android.text.format.DateFormat
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -23,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -61,6 +67,8 @@ fun SettingsScreen(
     val grayscaleEnabled by viewModel.grayscaleEnabled.collectAsStateWithLifecycle()
     val focusSchedules by viewModel.focusSchedules.collectAsStateWithLifecycle()
     val focusAutomationEnabled by viewModel.focusAutomationEnabled.collectAsStateWithLifecycle()
+    val showFocusStatus by viewModel.showFocusStatus.collectAsStateWithLifecycle()
+    val hiddenApps by viewModel.hiddenApps.collectAsStateWithLifecycle()
     val onBackground = MaterialTheme.colorScheme.onBackground
 
     val context = LocalContext.current
@@ -164,6 +172,24 @@ fun SettingsScreen(
         }
 
         Text(
+            text = stringResource(R.string.hidden_apps_section),
+            color = onBackground.copy(alpha = 0.6f),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(top = 20.dp, bottom = 4.dp),
+        )
+        if (hiddenApps.isEmpty()) {
+            Text(
+                text = stringResource(R.string.hidden_apps_empty_hint),
+                color = onBackground.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        } else {
+            hiddenApps.forEach { app ->
+                HiddenAppRow(app = app, onUnhide = { viewModel.unhide(app) })
+            }
+        }
+
+        Text(
             text = stringResource(R.string.focus_schedules_section),
             color = onBackground.copy(alpha = 0.6f),
             style = MaterialTheme.typography.bodyMedium,
@@ -178,8 +204,8 @@ fun SettingsScreen(
         focusSchedules.forEach { schedule ->
             FocusScheduleRow(
                 schedule = schedule,
-                onCycleStart = { viewModel.cycleStartHour(schedule) },
-                onCycleEnd = { viewModel.cycleEndHour(schedule) },
+                onSetStartHour = { hour -> viewModel.setStartHour(schedule, hour) },
+                onSetEndHour = { hour -> viewModel.setEndHour(schedule, hour) },
                 onToggleDay = { day -> viewModel.toggleDay(schedule, day) },
                 onToggleEnabled = { viewModel.toggleScheduleEnabled(schedule) },
                 onRemove = { viewModel.removeSchedule(schedule) },
@@ -204,6 +230,12 @@ fun SettingsScreen(
             color = onBackground.copy(alpha = 0.5f),
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(bottom = 8.dp),
+        )
+        SettingRow(
+            label = stringResource(R.string.focus_status_on_home_label),
+            options = listOf(stringResource(R.string.off), stringResource(R.string.on)),
+            selectedIndex = if (showFocusStatus) 1 else 0,
+            onSelect = { viewModel.setShowFocusStatus(it == 1) },
         )
 
         Text(
@@ -363,14 +395,16 @@ private fun BlockedAppRow(
 @Composable
 private fun FocusScheduleRow(
     schedule: FocusScheduleEntity,
-    onCycleStart: () -> Unit,
-    onCycleEnd: () -> Unit,
+    onSetStartHour: (Int) -> Unit,
+    onSetEndHour: (Int) -> Unit,
     onToggleDay: (Int) -> Unit,
     onToggleEnabled: () -> Unit,
     onRemove: () -> Unit,
 ) {
     val onBackground = MaterialTheme.colorScheme.onBackground
     val dayLabels = stringArrayResource(R.array.day_abbreviations)
+    var showStartPicker by remember { mutableStateOf(false) }
+    var showEndPicker by remember { mutableStateOf(false) }
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -397,14 +431,14 @@ private fun FocusScheduleRow(
                 color = onBackground.copy(alpha = 0.6f),
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier
-                    .clickable(onClick = onCycleStart)
+                    .clickable { showStartPicker = true }
                     .padding(end = 16.dp),
             )
             Text(
                 text = stringResource(R.string.schedule_end),
                 color = onBackground.copy(alpha = 0.6f),
                 style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.clickable(onClick = onCycleEnd),
+                modifier = Modifier.clickable { showEndPicker = true },
             )
         }
         Row(modifier = Modifier.padding(top = 4.dp)) {
@@ -421,6 +455,62 @@ private fun FocusScheduleRow(
             }
         }
     }
+
+    if (showStartPicker) {
+        HourPickerDialog(
+            currentHour = schedule.startHour,
+            onSelect = {
+                onSetStartHour(it)
+                showStartPicker = false
+            },
+            onDismiss = { showStartPicker = false },
+        )
+    }
+    if (showEndPicker) {
+        HourPickerDialog(
+            currentHour = schedule.endHour,
+            onSelect = {
+                onSetEndHour(it)
+                showEndPicker = false
+            },
+            onDismiss = { showEndPicker = false },
+        )
+    }
+}
+
+@Composable
+private fun HourPickerDialog(
+    currentHour: Int,
+    onSelect: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val is24Hour = remember(context) { DateFormat.is24HourFormat(context) }
+    val onBackground = MaterialTheme.colorScheme.onBackground
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
+                items(24) { hour ->
+                    Text(
+                        text = formatHourLabel(hour, is24Hour),
+                        color = if (hour == currentHour) onBackground else onBackground.copy(alpha = 0.7f),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(hour) }
+                            .padding(horizontal = 24.dp, vertical = 12.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun formatHourLabel(hour: Int, is24Hour: Boolean): String {
+    if (is24Hour) return "%02d:00".format(hour)
+    val displayHour = if (hour % 12 == 0) 12 else hour % 12
+    val suffix = if (hour < 12) "AM" else "PM"
+    return "$displayHour:00 $suffix"
 }
 
 @Composable
@@ -443,6 +533,30 @@ private fun MutedAppRow(app: MutedAppUi, onRemove: () -> Unit) {
             color = onBackground.copy(alpha = 0.5f),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.clickable(onClick = onRemove),
+        )
+    }
+}
+
+@Composable
+private fun HiddenAppRow(app: LaunchableApp, onUnhide: () -> Unit) {
+    val onBackground = MaterialTheme.colorScheme.onBackground
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = app.displayLabel,
+            color = onBackground,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = stringResource(R.string.unhide),
+            color = onBackground.copy(alpha = 0.5f),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.clickable(onClick = onUnhide),
         )
     }
 }

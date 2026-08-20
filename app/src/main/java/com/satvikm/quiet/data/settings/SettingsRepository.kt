@@ -31,6 +31,7 @@ class SettingsRepository @Inject constructor(
         val SHOW_MUTED_COUNT = booleanPreferencesKey("show_muted_count")
         val GRAYSCALE_ENABLED = booleanPreferencesKey("grayscale_enabled")
         val FOCUS_AUTOMATION_ENABLED = booleanPreferencesKey("focus_automation_enabled")
+        val SHOW_FOCUS_STATUS = booleanPreferencesKey("show_focus_status")
     }
 
     val themeMode: Flow<ThemeMode> = enumFlow(Keys.THEME_MODE, ThemeMode.SYSTEM, ThemeMode::valueOf)
@@ -41,6 +42,7 @@ class SettingsRepository @Inject constructor(
     val showMutedCount: Flow<Boolean> = context.appSettingsDataStore.data.map { it[Keys.SHOW_MUTED_COUNT] ?: false }
     val grayscaleEnabled: Flow<Boolean> = context.appSettingsDataStore.data.map { it[Keys.GRAYSCALE_ENABLED] ?: false }
     val focusAutomationEnabled: Flow<Boolean> = context.appSettingsDataStore.data.map { it[Keys.FOCUS_AUTOMATION_ENABLED] ?: false }
+    val showFocusStatus: Flow<Boolean> = context.appSettingsDataStore.data.map { it[Keys.SHOW_FOCUS_STATUS] ?: false }
 
     suspend fun setThemeMode(mode: ThemeMode) = set(Keys.THEME_MODE, mode.name)
     suspend fun setFontFamily(family: AppFontFamily) = set(Keys.FONT_FAMILY, family.name)
@@ -57,6 +59,9 @@ class SettingsRepository @Inject constructor(
     }
     suspend fun setFocusAutomationEnabled(enabled: Boolean) {
         context.appSettingsDataStore.edit { it[Keys.FOCUS_AUTOMATION_ENABLED] = enabled }
+    }
+    suspend fun setShowFocusStatus(show: Boolean) {
+        context.appSettingsDataStore.edit { it[Keys.SHOW_FOCUS_STATUS] = show }
     }
 
     private fun <T : Enum<T>> enumFlow(

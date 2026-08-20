@@ -3,6 +3,7 @@ package com.satvikm.quiet.ui.settings
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.satvikm.quiet.data.apps.AppOverridesRepository
 import com.satvikm.quiet.data.apps.AppRepository
 import com.satvikm.quiet.data.block.BlocklistRepository
 import com.satvikm.quiet.data.focus.FocusScheduleEntity
@@ -50,6 +51,7 @@ class SettingsViewModel @Inject constructor(
     private val notificationMuteRepository: NotificationMuteRepository,
     private val focusScheduleRepository: FocusScheduleRepository,
     private val appRepository: AppRepository,
+    private val appOverridesRepository: AppOverridesRepository,
 ) : ViewModel() {
 
     private val started = SharingStarted.WhileSubscribed(5_000)
@@ -65,6 +67,7 @@ class SettingsViewModel @Inject constructor(
 
     val focusSchedules: StateFlow<List<FocusScheduleEntity>> = focusScheduleRepository.schedules
         .stateIn(viewModelScope, started, emptyList())
+    val showFocusStatus: StateFlow<Boolean> = settingsRepository.showFocusStatus.stateIn(viewModelScope, started, false)
 
     val swipeLeftApp: StateFlow<LaunchableApp?> = gestureApp(GestureSlot.SWIPE_LEFT)
     val swipeRightApp: StateFlow<LaunchableApp?> = gestureApp(GestureSlot.SWIPE_RIGHT)
@@ -95,6 +98,14 @@ class SettingsViewModel @Inject constructor(
                 label = labelByPackage[entity.packageName] ?: entity.packageName,
             )
         }.sortedBy { it.label.lowercase() }
+    }.stateIn(viewModelScope, started, emptyList())
+
+    val hiddenApps: StateFlow<List<LaunchableApp>> = combine(
+        appOverridesRepository.overrides,
+        appRepository.apps,
+    ) { overrides, apps ->
+        val byId = apps.associateBy { it.id }
+        overrides.filter { it.isHidden }.mapNotNull { byId[it.appId] }.sortedBy { it.displayLabel.lowercase() }
     }.stateIn(viewModelScope, started, emptyList())
 
     private fun gestureApp(slot: GestureSlot): StateFlow<LaunchableApp?> = combine(
@@ -148,6 +159,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { notificationMuteRepository.unmute(app.packageName) }
     }
 
+    fun unhide(app: LaunchableApp) {
+        viewModelScope.launch { appOverridesRepository.setHidden(app, false) }
+    }
+
     fun setGrayscale(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setGrayscaleEnabled(enabled) }
         setSystemGrayscale(context, enabled)
@@ -157,16 +172,20 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { focusScheduleRepository.addDefault() }
     }
 
+    fun setShowFocusStatus(show: Boolean) {
+        viewModelScope.launch { settingsRepository.setShowFocusStatus(show) }
+    }
+
     fun setFocusAutomationEnabled(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setFocusAutomationEnabled(enabled) }
     }
 
-    fun cycleStartHour(schedule: FocusScheduleEntity) {
-        viewModelScope.launch { focusScheduleRepository.update(schedule.copy(startHour = (schedule.startHour + 1) % 24)) }
+    fun setStartHour(schedule: FocusScheduleEntity, hour: Int) {
+        viewModelScope.launch { focusScheduleRepository.update(schedule.copy(startHour = hour)) }
     }
 
-    fun cycleEndHour(schedule: FocusScheduleEntity) {
-        viewModelScope.launch { focusScheduleRepository.update(schedule.copy(endHour = (schedule.endHour + 1) % 24)) }
+    fun setEndHour(schedule: FocusScheduleEntity, hour: Int) {
+        viewModelScope.launch { focusScheduleRepository.update(schedule.copy(endHour = hour)) }
     }
 
     fun toggleDay(schedule: FocusScheduleEntity, dayBitIndex: Int) {

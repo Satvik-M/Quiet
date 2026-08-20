@@ -75,6 +75,8 @@ fun HomeScreen(
     val screenTimeMillis by viewModel.screenTimeMillis.collectAsStateWithLifecycle()
     val showMutedCount by viewModel.showMutedCount.collectAsStateWithLifecycle()
     val mutedCountToday by viewModel.mutedCountToday.collectAsStateWithLifecycle()
+    val showFocusStatus by viewModel.showFocusStatus.collectAsStateWithLifecycle()
+    val focusActive by viewModel.focusActive.collectAsStateWithLifecycle()
 
     val timeFormatter = remember(context) {
         DateTimeFormatter.ofPattern(if (DateFormat.is24HourFormat(context)) "H:mm" else "h:mm")
@@ -165,6 +167,14 @@ fun HomeScreen(
         if (showMutedCount) {
             Text(
                 text = pluralStringResource(R.plurals.muted_count_today, mutedCountToday, mutedCountToday),
+                style = MaterialTheme.typography.bodyMedium,
+                color = onBackground.copy(alpha = 0.7f),
+            )
+        }
+
+        if (showFocusStatus && focusActive) {
+            Text(
+                text = stringResource(R.string.focus_active_home),
                 style = MaterialTheme.typography.bodyMedium,
                 color = onBackground.copy(alpha = 0.7f),
             )

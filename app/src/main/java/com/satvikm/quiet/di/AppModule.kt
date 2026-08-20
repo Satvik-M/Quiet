@@ -8,6 +8,7 @@ import com.satvikm.quiet.data.apps.AppDao
 import com.satvikm.quiet.data.apps.AppDatabase
 import com.satvikm.quiet.data.apps.AppOverrideDao
 import com.satvikm.quiet.data.block.BlockedAppDao
+import com.satvikm.quiet.data.block.GraceDao
 import com.satvikm.quiet.data.favorites.FavoriteDao
 import com.satvikm.quiet.data.focus.FocusAutoMuteDao
 import com.satvikm.quiet.data.focus.FocusScheduleDao
@@ -64,4 +65,7 @@ object AppModule {
 
     @Provides
     fun provideFocusAutoMuteDao(database: AppDatabase): FocusAutoMuteDao = database.focusAutoMuteDao()
+
+    @Provides
+    fun provideGraceDao(database: AppDatabase): GraceDao = database.graceDao()
 }

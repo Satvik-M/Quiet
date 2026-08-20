@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.satvikm.quiet.data.apps.AppRepository
 import com.satvikm.quiet.data.favorites.FavoritesRepository
+import com.satvikm.quiet.data.focus.FocusScheduleRepository
 import com.satvikm.quiet.data.notifications.NotificationMuteRepository
 import com.satvikm.quiet.data.settings.GestureSettingsRepository
 import com.satvikm.quiet.data.settings.GestureSlot
@@ -35,6 +36,7 @@ class HomeViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val usageRepository: UsageRepository,
     private val notificationMuteRepository: NotificationMuteRepository,
+    private val focusScheduleRepository: FocusScheduleRepository,
 ) : ViewModel() {
 
     private val started = SharingStarted.WhileSubscribed(5_000)
@@ -59,6 +61,11 @@ class HomeViewModel @Inject constructor(
         started = started,
         initialValue = 0,
     )
+
+    val focusActive: StateFlow<Boolean> = combine(focusScheduleRepository.schedules, currentTime) { schedules, now ->
+        FocusScheduleRepository.isActiveAt(schedules, now)
+    }.stateIn(viewModelScope, started, false)
+    val showFocusStatus: StateFlow<Boolean> = settingsRepository.showFocusStatus.stateIn(viewModelScope, started, false)
 
     val swipeLeftApp: StateFlow<LaunchableApp?> = gestureApp(GestureSlot.SWIPE_LEFT)
     val swipeRightApp: StateFlow<LaunchableApp?> = gestureApp(GestureSlot.SWIPE_RIGHT)

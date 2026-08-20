@@ -21,12 +21,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/**
- * Typing this exactly (case-insensitive) in the drawer search reveals
- * hidden apps. Hardcoded until M8 adds a real settings screen.
- */
-const val REVEAL_HIDDEN_APPS_TERM = "unhide"
-
 @HiltViewModel
 class DrawerViewModel @Inject constructor(
     private val appRepository: AppRepository,
@@ -97,10 +91,6 @@ class DrawerViewModel @Inject constructor(
 
     private fun filterAndRank(apps: List<LaunchableApp>, query: String): List<LaunchableApp> {
         val trimmed = query.trim()
-
-        if (trimmed.equals(REVEAL_HIDDEN_APPS_TERM, ignoreCase = true)) {
-            return apps.filter { it.isHidden }.sortedBy { it.displayLabel.lowercase() }
-        }
 
         val visible = apps.filterNot { it.isHidden }
         if (trimmed.isEmpty()) {

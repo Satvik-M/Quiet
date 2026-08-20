@@ -24,15 +24,19 @@ class FocusScheduleRepository @Inject constructor(
     }
 
     /** Whether any enabled schedule covers this instant — used by the friction screen, which needs this "live" with no UI open. */
-    suspend fun isFocusActiveNow(): Boolean {
-        val now = ZonedDateTime.now()
-        val dayBit = 1 shl (now.dayOfWeek.value - 1)
-        val hour = now.hour
-        return dao.getAll().any { schedule ->
-            schedule.enabled && (schedule.daysMask and dayBit) != 0 && hourInRange(hour, schedule.startHour, schedule.endHour)
-        }
-    }
+    suspend fun isFocusActiveNow(): Boolean = isActiveAt(dao.getAll(), ZonedDateTime.now())
 
-    private fun hourInRange(hour: Int, start: Int, end: Int): Boolean =
-        if (start <= end) hour in start until end else hour >= start || hour < end
+    companion object {
+        /** Pure version of [isFocusActiveNow], reusable against an already-loaded schedule list (e.g. for a reactive UI flow). */
+        fun isActiveAt(schedules: List<FocusScheduleEntity>, now: ZonedDateTime): Boolean {
+            val dayBit = 1 shl (now.dayOfWeek.value - 1)
+            val hour = now.hour
+            return schedules.any { schedule ->
+                schedule.enabled && (schedule.daysMask and dayBit) != 0 && hourInRange(hour, schedule.startHour, schedule.endHour)
+            }
+        }
+
+        private fun hourInRange(hour: Int, start: Int, end: Int): Boolean =
+            if (start <= end) hour in start until end else hour >= start || hour < end
+    }
 }
