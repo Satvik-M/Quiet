@@ -21,9 +21,18 @@ abstract class MutedAppDao {
     @Query("DELETE FROM muted_apps WHERE packageName = :packageName")
     abstract suspend fun delete(packageName: String)
 
+    @Query("DELETE FROM muted_apps")
+    abstract suspend fun deleteAllMuted()
+
     @Insert
     abstract suspend fun logMuted(entity: MutedNotificationEntity)
 
     @Query("SELECT COUNT(*) FROM muted_notifications WHERE timestampMillis >= :sinceMillis")
     abstract suspend fun countMutedSince(sinceMillis: Long): Int
+
+    @Query("SELECT * FROM muted_notifications WHERE timestampMillis >= :sinceMillis ORDER BY timestampMillis DESC")
+    abstract suspend fun getSince(sinceMillis: Long): List<MutedNotificationEntity>
+
+    @Query("DELETE FROM muted_notifications WHERE timestampMillis < :beforeMillis")
+    abstract suspend fun deleteOlderThan(beforeMillis: Long)
 }

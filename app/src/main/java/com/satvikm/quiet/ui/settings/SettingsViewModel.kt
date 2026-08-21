@@ -66,6 +66,8 @@ class SettingsViewModel @Inject constructor(
     val showMutedCount: StateFlow<Boolean> = settingsRepository.showMutedCount.stateIn(viewModelScope, started, false)
     val grayscaleEnabled: StateFlow<Boolean> = settingsRepository.grayscaleEnabled.stateIn(viewModelScope, started, false)
     val focusAutomationEnabled: StateFlow<Boolean> = settingsRepository.focusAutomationEnabled.stateIn(viewModelScope, started, false)
+    val notificationDigestEnabled: StateFlow<Boolean> = settingsRepository.notificationDigestEnabled.stateIn(viewModelScope, started, false)
+    val onboardingCompleted: StateFlow<Boolean> = settingsRepository.onboardingCompleted.stateIn(viewModelScope, started, false)
 
     val focusSchedules: StateFlow<List<FocusScheduleEntity>> = focusScheduleRepository.schedules
         .stateIn(viewModelScope, started, emptyList())
@@ -186,6 +188,14 @@ class SettingsViewModel @Inject constructor(
 
     fun setFocusAutomationEnabled(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setFocusAutomationEnabled(enabled) }
+    }
+
+    fun setNotificationDigestEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setNotificationDigestEnabled(enabled) }
+    }
+
+    fun setOnboardingCompleted(completed: Boolean) {
+        viewModelScope.launch { settingsRepository.setOnboardingCompleted(completed) }
     }
 
     fun setStartHour(schedule: FocusScheduleEntity, hour: Int) {

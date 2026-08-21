@@ -35,6 +35,8 @@ class SettingsRepository @Inject constructor(
         val SHOW_FOCUS_STATUS = booleanPreferencesKey("show_focus_status")
         val MANUAL_FOCUS_ACTIVE = booleanPreferencesKey("manual_focus_active")
         val DAILY_GOAL_MINUTES = intPreferencesKey("daily_goal_minutes")
+        val NOTIFICATION_DIGEST_ENABLED = booleanPreferencesKey("notification_digest_enabled")
+        val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     }
 
     val themeMode: Flow<ThemeMode> = enumFlow(Keys.THEME_MODE, ThemeMode.SYSTEM, ThemeMode::valueOf)
@@ -50,6 +52,9 @@ class SettingsRepository @Inject constructor(
     val manualFocusActive: Flow<Boolean> = context.appSettingsDataStore.data.map { it[Keys.MANUAL_FOCUS_ACTIVE] ?: false }
     /** Null means no daily screen-time goal is set. */
     val dailyGoalMinutes: Flow<Int?> = context.appSettingsDataStore.data.map { it[Keys.DAILY_GOAL_MINUTES] }
+    /** When on, [com.satvikm.quiet.service.NotificationFilterService] stores the title/text of muted notifications so the digest screen can show what was suppressed, not just how many. */
+    val notificationDigestEnabled: Flow<Boolean> = context.appSettingsDataStore.data.map { it[Keys.NOTIFICATION_DIGEST_ENABLED] ?: false }
+    val onboardingCompleted: Flow<Boolean> = context.appSettingsDataStore.data.map { it[Keys.ONBOARDING_COMPLETED] ?: false }
 
     suspend fun setThemeMode(mode: ThemeMode) = set(Keys.THEME_MODE, mode.name)
     suspend fun setFontFamily(family: AppFontFamily) = set(Keys.FONT_FAMILY, family.name)
@@ -77,6 +82,12 @@ class SettingsRepository @Inject constructor(
         context.appSettingsDataStore.edit {
             if (minutes == null) it.remove(Keys.DAILY_GOAL_MINUTES) else it[Keys.DAILY_GOAL_MINUTES] = minutes
         }
+    }
+    suspend fun setNotificationDigestEnabled(enabled: Boolean) {
+        context.appSettingsDataStore.edit { it[Keys.NOTIFICATION_DIGEST_ENABLED] = enabled }
+    }
+    suspend fun setOnboardingCompleted(completed: Boolean) {
+        context.appSettingsDataStore.edit { it[Keys.ONBOARDING_COMPLETED] = completed }
     }
 
     private fun <T : Enum<T>> enumFlow(

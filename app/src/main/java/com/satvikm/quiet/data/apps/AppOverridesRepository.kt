@@ -20,6 +20,12 @@ class AppOverridesRepository @Inject constructor(
         applyOrClear(app.id) { it.copy(customLabel = trimmed) }
     }
 
+    /** Replaces every override with [entities] — used by backup restore. */
+    suspend fun replaceAll(entities: List<AppOverrideEntity>) {
+        dao.deleteAll()
+        entities.forEach { dao.upsert(it) }
+    }
+
     private suspend fun applyOrClear(appId: String, update: (AppOverrideEntity) -> AppOverrideEntity) {
         val current = dao.get(appId) ?: AppOverrideEntity(appId = appId)
         val updated = update(current)

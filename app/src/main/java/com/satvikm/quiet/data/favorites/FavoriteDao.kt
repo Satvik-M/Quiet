@@ -25,6 +25,9 @@ abstract class FavoriteDao {
     @Query("DELETE FROM favorites WHERE appId = :appId")
     abstract suspend fun delete(appId: String)
 
+    @Query("DELETE FROM favorites")
+    abstract suspend fun deleteAll()
+
     @Query("UPDATE favorites SET position = :position WHERE appId = :appId")
     protected abstract suspend fun updatePosition(appId: String, position: Int)
 

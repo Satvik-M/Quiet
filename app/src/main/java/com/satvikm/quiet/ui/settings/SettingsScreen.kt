@@ -53,6 +53,8 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onPickGestureApp: (GestureSlot) -> Unit,
     onOpenUsage: () -> Unit,
+    onOpenDigest: () -> Unit,
+    onOpenBackup: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
@@ -65,6 +67,7 @@ fun SettingsScreen(
     val blockedApps by viewModel.blockedApps.collectAsStateWithLifecycle()
     val mutedApps by viewModel.mutedApps.collectAsStateWithLifecycle()
     val showMutedCount by viewModel.showMutedCount.collectAsStateWithLifecycle()
+    val notificationDigestEnabled by viewModel.notificationDigestEnabled.collectAsStateWithLifecycle()
     val grayscaleEnabled by viewModel.grayscaleEnabled.collectAsStateWithLifecycle()
     val focusSchedules by viewModel.focusSchedules.collectAsStateWithLifecycle()
     val focusAutomationEnabled by viewModel.focusAutomationEnabled.collectAsStateWithLifecycle()
@@ -272,6 +275,26 @@ fun SettingsScreen(
             selectedIndex = if (showMutedCount) 1 else 0,
             onSelect = { viewModel.setShowMutedCount(it == 1) },
         )
+        SettingRow(
+            label = stringResource(R.string.notification_digest_label),
+            options = listOf(stringResource(R.string.off), stringResource(R.string.on)),
+            selectedIndex = if (notificationDigestEnabled) 1 else 0,
+            onSelect = { viewModel.setNotificationDigestEnabled(it == 1) },
+        )
+        Text(
+            text = stringResource(R.string.notification_digest_hint),
+            color = onBackground.copy(alpha = 0.5f),
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+        Text(
+            text = stringResource(R.string.view_digest),
+            color = onBackground,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier
+                .clickable(onClick = onOpenDigest)
+                .padding(top = 4.dp),
+        )
 
         Text(
             text = stringResource(R.string.grayscale_section),
@@ -319,6 +342,19 @@ fun SettingsScreen(
             modifier = Modifier
                 .clickable(onClick = onOpenUsage)
                 .padding(top = 8.dp),
+        )
+
+        Text(
+            text = stringResource(R.string.backup_section),
+            color = onBackground.copy(alpha = 0.6f),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(top = 20.dp, bottom = 4.dp),
+        )
+        Text(
+            text = stringResource(R.string.manage_backup),
+            color = onBackground,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.clickable(onClick = onOpenBackup),
         )
     }
 }

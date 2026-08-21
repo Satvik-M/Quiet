@@ -21,4 +21,7 @@ abstract class FocusScheduleDao {
 
     @Delete
     abstract suspend fun delete(entity: FocusScheduleEntity)
+
+    @Query("DELETE FROM focus_schedules")
+    abstract suspend fun deleteAll()
 }

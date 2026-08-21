@@ -1,9 +1,11 @@
 package com.satvikm.quiet.service
 
+import android.app.Notification
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import com.satvikm.quiet.data.focus.FocusAutoMuteRepository
 import com.satvikm.quiet.data.notifications.NotificationMuteRepository
+import com.satvikm.quiet.data.settings.SettingsRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,21 +30,27 @@ class NotificationFilterService : NotificationListenerService() {
 
     @Inject lateinit var muteRepository: NotificationMuteRepository
     @Inject lateinit var focusAutoMuteRepository: FocusAutoMuteRepository
+    @Inject lateinit var settingsRepository: SettingsRepository
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var mutedPackages: Set<String> = emptySet()
+    private var digestEnabled: Boolean = false
 
     override fun onListenerConnected() {
         combine(muteRepository.mutedApps, focusAutoMuteRepository.autoMuted) { manual, auto ->
             manual.map { it.packageName }.toSet() + auto.map { it.packageName }.toSet()
         }.onEach { mutedPackages = it }.launchIn(serviceScope)
+        settingsRepository.notificationDigestEnabled.onEach { digestEnabled = it }.launchIn(serviceScope)
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         val packageName = sbn?.packageName ?: return
         if (packageName !in mutedPackages) return
         cancelNotification(sbn.key)
-        serviceScope.launch { muteRepository.recordMuted(packageName) }
+        val extras = sbn.notification?.extras
+        val title = if (digestEnabled) extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString() else null
+        val text = if (digestEnabled) extras?.getCharSequence(Notification.EXTRA_TEXT)?.toString() else null
+        serviceScope.launch { muteRepository.recordMuted(packageName, title, text) }
     }
 
     override fun onDestroy() {

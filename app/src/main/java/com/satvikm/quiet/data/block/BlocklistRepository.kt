@@ -43,6 +43,12 @@ class BlocklistRepository @Inject constructor(
         dao.delete(packageName)
     }
 
+    /** Replaces the entire friction list with [entities] — used by backup restore. */
+    suspend fun replaceAll(entities: List<BlockedAppEntity>) {
+        dao.deleteAll()
+        entities.forEach { dao.upsert(it) }
+    }
+
     suspend fun recordOpen(packageName: String) {
         dao.logOpen(AppOpenEntity(packageName = packageName, timestampMillis = System.currentTimeMillis()))
     }

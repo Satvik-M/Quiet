@@ -24,6 +24,12 @@ class FavoritesRepository @Inject constructor(
         favoriteDao.reorder(appIdsInOrder)
     }
 
+    /** Replaces every favorite with [entities] — used by backup restore. */
+    suspend fun replaceAll(entities: List<FavoriteEntity>) {
+        favoriteDao.deleteAll()
+        entities.forEach { favoriteDao.insert(it) }
+    }
+
     companion object {
         /** Tier 0 spec: 1–8 favorites shown as plain text lines on home. */
         const val MAX_FAVORITES = 8

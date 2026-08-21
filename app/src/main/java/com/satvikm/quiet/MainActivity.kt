@@ -40,8 +40,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.satvikm.quiet.data.settings.AppFontFamily
 import com.satvikm.quiet.data.settings.GestureSlot
 import com.satvikm.quiet.data.settings.ThemeMode
+import com.satvikm.quiet.ui.backup.BackupScreen
+import com.satvikm.quiet.ui.digest.DigestScreen
 import com.satvikm.quiet.ui.drawer.DrawerScreen
 import com.satvikm.quiet.ui.home.HomeScreen
+import com.satvikm.quiet.ui.onboarding.OnboardingScreen
 import com.satvikm.quiet.ui.settings.SettingsScreen
 import com.satvikm.quiet.ui.settings.SettingsViewModel
 import com.satvikm.quiet.ui.theme.QuietTheme
@@ -93,12 +96,13 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Route { HOME, DRAWER, SETTINGS, USAGE }
+private enum class Route { HOME, DRAWER, SETTINGS, USAGE, DIGEST, BACKUP }
 
 @Composable
-private fun AppRoot(homePressCount: Int) {
+private fun AppRoot(homePressCount: Int, settingsViewModel: SettingsViewModel = hiltViewModel()) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val onboardingCompleted by settingsViewModel.onboardingCompleted.collectAsStateWithLifecycle()
     var isDefault by remember { mutableStateOf(isDefaultLauncher(context)) }
     var route by remember { mutableStateOf(Route.HOME) }
     var gesturePickSlot by remember { mutableStateOf<GestureSlot?>(null) }
@@ -113,6 +117,7 @@ private fun AppRoot(homePressCount: Int) {
         when {
             gesturePickSlot != null -> gesturePickSlot = null
             route == Route.USAGE -> route = usageReturnRoute
+            route == Route.DIGEST || route == Route.BACKUP -> route = Route.SETTINGS
             route != Route.HOME -> route = Route.HOME
         }
     }
@@ -148,7 +153,9 @@ private fun AppRoot(homePressCount: Int) {
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
     ) {
-        if (!isDefault) {
+        if (!onboardingCompleted) {
+            OnboardingScreen(onFinish = { settingsViewModel.setOnboardingCompleted(true) })
+        } else if (!isDefault) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -177,6 +184,8 @@ private fun AppRoot(homePressCount: Int) {
         } else when (route) {
             Route.DRAWER -> DrawerScreen()
             Route.USAGE -> UsageScreen(onBack = { route = usageReturnRoute })
+            Route.DIGEST -> DigestScreen(onBack = { route = Route.SETTINGS })
+            Route.BACKUP -> BackupScreen(onBack = { route = Route.SETTINGS })
             Route.SETTINGS -> SettingsScreen(
                 onBack = { route = Route.HOME },
                 onPickGestureApp = { slot -> gesturePickSlot = slot },
@@ -184,6 +193,8 @@ private fun AppRoot(homePressCount: Int) {
                     usageReturnRoute = Route.SETTINGS
                     route = Route.USAGE
                 },
+                onOpenDigest = { route = Route.DIGEST },
+                onOpenBackup = { route = Route.BACKUP },
             )
             Route.HOME -> HomeScreen(
                 onOpenDrawer = { route = Route.DRAWER },

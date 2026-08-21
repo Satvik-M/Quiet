@@ -21,6 +21,9 @@ abstract class BlockedAppDao {
     @Query("DELETE FROM blocked_apps WHERE packageName = :packageName")
     abstract suspend fun delete(packageName: String)
 
+    @Query("DELETE FROM blocked_apps")
+    abstract suspend fun deleteAll()
+
     @Insert
     abstract suspend fun logOpen(entity: AppOpenEntity)
 

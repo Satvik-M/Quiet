@@ -100,6 +100,11 @@
     <string name="grant_notification_access">Grant Notification access to mute apps</string>
     <string name="muted_empty_hint">Long-press an app in the drawer to mute it</string>
     <string name="muted_count_on_home_label">Muted count on home</string>
+    <string name="notification_digest_label">Notification digest</string>
+    <string name="notification_digest_hint">Store muted notifications\' titles and text so you can review what was suppressed</string>
+    <string name="view_digest">View digest</string>
+    <string name="backup_section">Backup</string>
+    <string name="manage_backup">Export or import settings</string>
     <string name="grayscale_section">Grayscale</string>
     <string name="grayscale_permission_hint">Grayscale needs a one-time permission grant over ADB — Settings has no UI for it:</string>
     <string name="system_wide_grayscale_label">System-wide grayscale</string>
@@ -134,4 +139,38 @@
     <string name="week_title">This week</string>
     <string name="daily_goal_label">Daily goal</string>
     <string name="streak_label">%1$d day streak</string>
+
+    <!-- Digest -->
+    <string name="digest_title">Digest</string>
+    <string name="digest_empty_hint">Nothing muted today</string>
+    <string name="digest_no_content">Notification muted</string>
+
+    <!-- Backup -->
+    <string name="backup_title">Backup</string>
+    <string name="backup_hint">Export your settings, friction list, muted apps, focus schedules, favorites, and hidden apps to a file — or restore them from one.</string>
+    <string name="export_settings">Export settings</string>
+    <string name="import_settings">Import settings</string>
+    <string name="import_replaces_hint">Importing replaces your current friction list, muted apps, focus schedules, favorites, and hidden apps</string>
+    <string name="backup_export_success">Exported</string>
+    <string name="backup_import_success">Imported</string>
+    <string name="backup_error">Something went wrong</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_welcome_title">Welcome to Quiet</string>
+    <string name="onboarding_welcome_body">A minimalist home screen that gets out of your way — plain text, a few favorites, and deliberate friction for the apps you\'re trying to use less.</string>
+    <string name="onboarding_default_launcher_title">Set as your home screen</string>
+    <string name="onboarding_default_launcher_body">Quiet only works as your default launcher. You can change this later in system Settings.</string>
+    <string name="onboarding_default_launcher_done">Set as default ✓</string>
+    <string name="onboarding_permissions_title">Optional permissions</string>
+    <string name="onboarding_permissions_body">Each one unlocks a feature. Skip any you don\'t need — you can grant them later from Settings.</string>
+    <string name="onboarding_usage_access">Usage access — screen time</string>
+    <string name="onboarding_accessibility">Accessibility — lock screen &amp; notification gestures</string>
+    <string name="onboarding_notification_access">Notification access — mute apps</string>
+    <string name="granted_label">Granted</string>
+    <string name="grant_action">Grant</string>
+    <string name="onboarding_done_title">You\'re set</string>
+    <string name="onboarding_done_body">Long-press an app in the drawer to pin, hide, rename, mute, or add friction to it. Everything else lives in Settings.</string>
+    <string name="onboarding_get_started">Get started</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_skip">Skip</string>
 </resources>

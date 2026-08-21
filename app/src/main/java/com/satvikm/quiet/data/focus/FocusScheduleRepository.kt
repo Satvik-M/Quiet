@@ -23,6 +23,12 @@ class FocusScheduleRepository @Inject constructor(
         dao.delete(entity)
     }
 
+    /** Replaces every schedule with [entities] — used by backup restore. */
+    suspend fun replaceAll(entities: List<FocusScheduleEntity>) {
+        dao.deleteAll()
+        entities.forEach { dao.upsert(it) }
+    }
+
     /** Whether any enabled schedule covers this instant — used by the friction screen, which needs this "live" with no UI open. */
     suspend fun isFocusActiveNow(): Boolean = isActiveAt(dao.getAll(), ZonedDateTime.now())
 

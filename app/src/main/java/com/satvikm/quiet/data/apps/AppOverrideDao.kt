@@ -20,4 +20,7 @@ abstract class AppOverrideDao {
 
     @Query("DELETE FROM app_overrides WHERE appId = :appId")
     abstract suspend fun delete(appId: String)
+
+    @Query("DELETE FROM app_overrides")
+    abstract suspend fun deleteAll()
 }

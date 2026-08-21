@@ -7,7 +7,12 @@
       "Bash(/opt/homebrew/share/android-commandlinetools/platform-tools/adb pull *)",
       "Bash(./gradlew assembleDebug -q)",
       "Bash(/opt/homebrew/share/android-commandlinetools/platform-tools/adb -s 53171FDAP001AW shell input tap 479 1267)",
-      "Bash(/opt/homebrew/share/android-commandlinetools/platform-tools/adb -s 53171FDAP001AW exec-out screencap -p)"
+      "Bash(/opt/homebrew/share/android-commandlinetools/platform-tools/adb -s 53171FDAP001AW exec-out screencap -p)",
+      "Bash(/opt/homebrew/share/android-commandlinetools/platform-tools/adb -s 53171FDAP001AW shell input swipe 140 353 140 353 800)",
+      "Bash(/opt/homebrew/share/android-commandlinetools/platform-tools/adb -s 53171FDAP001AW shell input tap 108 713)",
+      "Bash(/opt/homebrew/share/android-commandlinetools/platform-tools/adb -s 53171FDAP001AW shell input keyevent KEYCODE_BACK)",
+      "Bash(/opt/homebrew/share/android-commandlinetools/platform-tools/adb -s 53171FDAP001AW shell uiautomator dump /sdcard/ui.xml)",
+      "Bash(/opt/homebrew/share/android-commandlinetools/platform-tools/adb -s 53171FDAP001AW shell cat /sdcard/ui.xml)"
     ]
   }
 }
