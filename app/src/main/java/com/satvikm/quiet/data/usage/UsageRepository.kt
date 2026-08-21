@@ -44,13 +44,14 @@ class UsageRepository @Inject constructor(
         return mode == AppOpsManager.MODE_ALLOWED
     }
 
-    /** Per-app foreground time and unlock count since local midnight, computed from raw events (not the coarse aggregate buckets). */
-    suspend fun today(): DailyUsage = withContext(Dispatchers.Default) {
+    /** Per-app foreground time and unlock count for [date] (all of it, if [date] is in the past), computed from raw events (not the coarse aggregate buckets). */
+    suspend fun usageForDate(date: LocalDate): DailyUsage = withContext(Dispatchers.Default) {
         if (!isUsageAccessGranted()) return@withContext DailyUsage(0L, 0, emptyList())
 
         val zone = ZoneId.systemDefault()
-        val startOfDay = LocalDate.now(zone).atStartOfDay(zone).toInstant().toEpochMilli()
-        val now = System.currentTimeMillis()
+        val startOfDay = date.atStartOfDay(zone).toInstant().toEpochMilli()
+        val endOfDay = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+        val queryEnd = minOf(endOfDay, System.currentTimeMillis())
         val keyguardHiddenEventType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             UsageEvents.Event.KEYGUARD_HIDDEN
         } else {
@@ -61,7 +62,7 @@ class UsageRepository @Inject constructor(
         val perApp = mutableMapOf<String, Long>()
         var unlockCount = 0
 
-        val events = usageStatsManager.queryEvents(startOfDay, now)
+        val events = usageStatsManager.queryEvents(startOfDay, queryEnd)
         val event = UsageEvents.Event()
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
@@ -76,9 +77,9 @@ class UsageRepository @Inject constructor(
                 keyguardHiddenEventType -> unlockCount++
             }
         }
-        // Anything still foregrounded (e.g. this app, right now) counts up to "now".
+        // Anything still foregrounded (e.g. this app, right now, for today) counts up to queryEnd.
         for ((packageName, start) in foregroundSince) {
-            perApp[packageName] = (perApp[packageName] ?: 0L) + (now - start)
+            perApp[packageName] = (perApp[packageName] ?: 0L) + (queryEnd - start)
         }
 
         // Raw events include system UI components (status bar, keyguard, the
@@ -94,5 +95,34 @@ class UsageRepository @Inject constructor(
             perApp = filteredPerApp.map { (packageName, millis) -> AppUsage(packageName, millis) }
                 .sortedByDescending { it.foregroundMillis },
         )
+    }
+
+    suspend fun today(): DailyUsage = usageForDate(LocalDate.now(ZoneId.systemDefault()))
+
+    /** Oldest-to-newest daily totals for the last [count] days, including today. */
+    suspend fun lastDays(count: Int): List<Pair<LocalDate, DailyUsage>> {
+        val today = LocalDate.now(ZoneId.systemDefault())
+        return (count - 1 downTo 0).map { offset ->
+            val date = today.minusDays(offset.toLong())
+            date to usageForDate(date)
+        }
+    }
+
+    /**
+     * Consecutive completed days (ending yesterday) whose total foreground
+     * time stayed within [goalMinutes] — today doesn't count yet since it
+     * isn't over. Capped at [maxDays]: the OS doesn't reliably retain raw
+     * usage events much further back than that, so an uncapped walk could
+     * silently read missing history as "goal met" and inflate the streak.
+     */
+    suspend fun streak(goalMinutes: Int, maxDays: Int = 14): Int {
+        val goalMillis = goalMinutes * 60_000L
+        val today = LocalDate.now(ZoneId.systemDefault())
+        var count = 0
+        for (offset in 1..maxDays) {
+            if (usageForDate(today.minusDays(offset.toLong())).totalMillis > goalMillis) break
+            count++
+        }
+        return count
     }
 }

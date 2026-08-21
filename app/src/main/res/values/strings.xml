@@ -14,6 +14,7 @@
     <string name="on">On</string>
     <string name="duration_hours_minutes">%1$dh %2$dm</string>
     <string name="duration_minutes">%1$dm</string>
+    <string name="duration_hours">%1$dh</string>
 
     <!-- MainActivity -->
     <string name="not_default_launcher_message">Quiet isn\'t your home screen yet.</string>
@@ -78,6 +79,8 @@
     <string name="delay_seconds">Delay: %1$ds</string>
     <string name="daily_limit_none">Daily limit: none</string>
     <string name="daily_limit_value">Daily limit: %1$d</string>
+    <string name="time_budget_none">Time budget: none</string>
+    <string name="time_budget_value">Time budget: %1$dm</string>
     <string name="focus_schedules_section">Focus schedules</string>
     <string name="focus_schedules_hint">During these windows, friction apps get a longer delay and no \"Continue\"</string>
     <string name="add_schedule">Add schedule</string>
@@ -116,6 +119,7 @@
     <!-- Friction -->
     <string name="blocked_during_focus_time">Blocked during focus time</string>
     <string name="daily_limit_reached">Daily limit reached</string>
+    <string name="time_budget_reached">Daily time limit reached</string>
     <string name="take_a_breath">Take a breath.</string>
     <string name="close">Close</string>
     <string name="continue_action">Continue</string>
@@ -127,4 +131,7 @@
         <item quantity="one">%1$d unlock</item>
         <item quantity="other">%1$d unlocks</item>
     </plurals>
+    <string name="week_title">This week</string>
+    <string name="daily_goal_label">Daily goal</string>
+    <string name="streak_label">%1$d day streak</string>
 </resources>

@@ -42,6 +42,7 @@ fun FrictionScreen(
     var loaded by remember { mutableStateOf(false) }
     var secondsLeft by remember { mutableIntStateOf(0) }
     var dailyLimitReached by remember { mutableStateOf(false) }
+    var timeBudgetReached by remember { mutableStateOf(false) }
     var focusBlocked by remember { mutableStateOf(false) }
 
     BackHandler(onBack = onClose)
@@ -55,6 +56,7 @@ fun FrictionScreen(
             entity?.delaySeconds ?: 0
         }
         dailyLimitReached = entity?.let { !blocklistRepository.canContinue(it) } ?: false
+        timeBudgetReached = entity?.let { !blocklistRepository.withinTimeBudget(it) } ?: false
         focusBlocked = focusActive
         loaded = true
     }
@@ -90,6 +92,11 @@ fun FrictionScreen(
                 color = onBackground.copy(alpha = 0.7f),
                 style = MaterialTheme.typography.bodyLarge,
             )
+            timeBudgetReached -> Text(
+                text = stringResource(R.string.time_budget_reached),
+                color = onBackground.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.bodyLarge,
+            )
             secondsLeft > 0 -> Text(
                 text = "$secondsLeft",
                 style = MaterialTheme.typography.displayLarge,
@@ -113,7 +120,7 @@ fun FrictionScreen(
                 .padding(16.dp),
         )
 
-        if (!focusBlocked && !dailyLimitReached && secondsLeft == 0) {
+        if (!focusBlocked && !dailyLimitReached && !timeBudgetReached && secondsLeft == 0) {
             Text(
                 text = stringResource(R.string.continue_action),
                 style = MaterialTheme.typography.titleLarge,

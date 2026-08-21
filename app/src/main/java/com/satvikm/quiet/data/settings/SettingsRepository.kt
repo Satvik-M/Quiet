@@ -3,6 +3,7 @@ package com.satvikm.quiet.data.settings
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -33,6 +34,7 @@ class SettingsRepository @Inject constructor(
         val FOCUS_AUTOMATION_ENABLED = booleanPreferencesKey("focus_automation_enabled")
         val SHOW_FOCUS_STATUS = booleanPreferencesKey("show_focus_status")
         val MANUAL_FOCUS_ACTIVE = booleanPreferencesKey("manual_focus_active")
+        val DAILY_GOAL_MINUTES = intPreferencesKey("daily_goal_minutes")
     }
 
     val themeMode: Flow<ThemeMode> = enumFlow(Keys.THEME_MODE, ThemeMode.SYSTEM, ThemeMode::valueOf)
@@ -46,6 +48,8 @@ class SettingsRepository @Inject constructor(
     val showFocusStatus: Flow<Boolean> = context.appSettingsDataStore.data.map { it[Keys.SHOW_FOCUS_STATUS] ?: false }
     /** Ad-hoc "Focus now" override — applies focus effects immediately regardless of any schedule, toggled from the home screen or the Quick Settings tile. */
     val manualFocusActive: Flow<Boolean> = context.appSettingsDataStore.data.map { it[Keys.MANUAL_FOCUS_ACTIVE] ?: false }
+    /** Null means no daily screen-time goal is set. */
+    val dailyGoalMinutes: Flow<Int?> = context.appSettingsDataStore.data.map { it[Keys.DAILY_GOAL_MINUTES] }
 
     suspend fun setThemeMode(mode: ThemeMode) = set(Keys.THEME_MODE, mode.name)
     suspend fun setFontFamily(family: AppFontFamily) = set(Keys.FONT_FAMILY, family.name)
@@ -68,6 +72,11 @@ class SettingsRepository @Inject constructor(
     }
     suspend fun setManualFocusActive(active: Boolean) {
         context.appSettingsDataStore.edit { it[Keys.MANUAL_FOCUS_ACTIVE] = active }
+    }
+    suspend fun setDailyGoalMinutes(minutes: Int?) {
+        context.appSettingsDataStore.edit {
+            if (minutes == null) it.remove(Keys.DAILY_GOAL_MINUTES) else it[Keys.DAILY_GOAL_MINUTES] = minutes
+        }
     }
 
     private fun <T : Enum<T>> enumFlow(

@@ -32,6 +32,7 @@ data class BlockedAppUi(
     val label: String,
     val delaySeconds: Int,
     val dailyOpenLimit: Int?,
+    val dailyTimeBudgetMinutes: Int?,
 )
 
 data class MutedAppUi(
@@ -41,6 +42,7 @@ data class MutedAppUi(
 
 private val DELAY_OPTIONS = listOf(0, 5, 10, 15, 20, 30)
 private val DAILY_LIMIT_OPTIONS: List<Int?> = listOf(null, 1, 3, 5, 10)
+private val TIME_BUDGET_OPTIONS: List<Int?> = listOf(null, 15, 30, 60, 120)
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -83,6 +85,7 @@ class SettingsViewModel @Inject constructor(
                 label = labelByPackage[entity.packageName] ?: entity.packageName,
                 delaySeconds = entity.delaySeconds,
                 dailyOpenLimit = entity.dailyOpenLimit,
+                dailyTimeBudgetMinutes = entity.dailyTimeBudgetMinutes,
             )
         }.sortedBy { it.label.lowercase() }
     }.stateIn(viewModelScope, started, emptyList())
@@ -143,12 +146,17 @@ class SettingsViewModel @Inject constructor(
 
     fun cycleDelay(app: BlockedAppUi) {
         val next = DELAY_OPTIONS[(DELAY_OPTIONS.indexOf(app.delaySeconds).coerceAtLeast(0) + 1) % DELAY_OPTIONS.size]
-        viewModelScope.launch { blocklistRepository.setBlocked(app.packageName, next, app.dailyOpenLimit) }
+        viewModelScope.launch { blocklistRepository.setBlocked(app.packageName, next, app.dailyOpenLimit, app.dailyTimeBudgetMinutes) }
     }
 
     fun cycleDailyLimit(app: BlockedAppUi) {
         val next = DAILY_LIMIT_OPTIONS[(DAILY_LIMIT_OPTIONS.indexOf(app.dailyOpenLimit).coerceAtLeast(0) + 1) % DAILY_LIMIT_OPTIONS.size]
-        viewModelScope.launch { blocklistRepository.setBlocked(app.packageName, app.delaySeconds, next) }
+        viewModelScope.launch { blocklistRepository.setBlocked(app.packageName, app.delaySeconds, next, app.dailyTimeBudgetMinutes) }
+    }
+
+    fun cycleTimeBudget(app: BlockedAppUi) {
+        val next = TIME_BUDGET_OPTIONS[(TIME_BUDGET_OPTIONS.indexOf(app.dailyTimeBudgetMinutes).coerceAtLeast(0) + 1) % TIME_BUDGET_OPTIONS.size]
+        viewModelScope.launch { blocklistRepository.setBlocked(app.packageName, app.delaySeconds, app.dailyOpenLimit, next) }
     }
 
     fun removeBlocked(app: BlockedAppUi) {

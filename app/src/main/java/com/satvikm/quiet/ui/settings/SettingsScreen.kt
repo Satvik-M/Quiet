@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.satvikm.quiet.R
 import com.satvikm.quiet.data.focus.FocusScheduleEntity
+import com.satvikm.quiet.ui.common.SettingRow
 import com.satvikm.quiet.data.settings.AppFontFamily
 import com.satvikm.quiet.data.settings.FontSize
 import com.satvikm.quiet.data.settings.GestureSlot
@@ -166,6 +167,7 @@ fun SettingsScreen(
                     app = app,
                     onCycleDelay = { viewModel.cycleDelay(app) },
                     onCycleDailyLimit = { viewModel.cycleDailyLimit(app) },
+                    onCycleTimeBudget = { viewModel.cycleTimeBudget(app) },
                     onRemove = { viewModel.removeBlocked(app) },
                 )
             }
@@ -322,36 +324,11 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SettingRow(
-    label: String,
-    options: List<String>,
-    selectedIndex: Int,
-    onSelect: (Int) -> Unit,
-) {
-    val onBackground = MaterialTheme.colorScheme.onBackground
-    Column(modifier = Modifier.padding(vertical = 12.dp)) {
-        Text(text = label, color = onBackground.copy(alpha = 0.6f), style = MaterialTheme.typography.bodyMedium)
-        Row(modifier = Modifier.padding(top = 4.dp)) {
-            options.forEachIndexed { index, option ->
-                val selected = index == selectedIndex
-                Text(
-                    text = option,
-                    color = if (selected) onBackground else onBackground.copy(alpha = 0.35f),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier
-                        .clickable { onSelect(index) }
-                        .padding(end = 24.dp),
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun BlockedAppRow(
     app: BlockedAppUi,
     onCycleDelay: () -> Unit,
     onCycleDailyLimit: () -> Unit,
+    onCycleTimeBudget: () -> Unit,
     onRemove: () -> Unit,
 ) {
     val onBackground = MaterialTheme.colorScheme.onBackground
@@ -386,7 +363,15 @@ private fun BlockedAppRow(
                 text = app.dailyOpenLimit?.let { stringResource(R.string.daily_limit_value, it) } ?: stringResource(R.string.daily_limit_none),
                 color = onBackground.copy(alpha = 0.6f),
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.clickable(onClick = onCycleDailyLimit),
+                modifier = Modifier
+                    .clickable(onClick = onCycleDailyLimit)
+                    .padding(end = 20.dp),
+            )
+            Text(
+                text = app.dailyTimeBudgetMinutes?.let { stringResource(R.string.time_budget_value, it) } ?: stringResource(R.string.time_budget_none),
+                color = onBackground.copy(alpha = 0.6f),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.clickable(onClick = onCycleTimeBudget),
             )
         }
     }

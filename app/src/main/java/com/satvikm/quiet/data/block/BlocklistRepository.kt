@@ -1,5 +1,6 @@
 package com.satvikm.quiet.data.block
 
+import com.satvikm.quiet.data.usage.UsageRepository
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 import java.time.ZoneId
@@ -10,6 +11,7 @@ import javax.inject.Singleton
 class BlocklistRepository @Inject constructor(
     private val dao: BlockedAppDao,
     private val graceDao: GraceDao,
+    private val usageRepository: UsageRepository,
 ) {
     val blockedApps: Flow<List<BlockedAppEntity>> = dao.observeAll()
 
@@ -28,8 +30,13 @@ class BlocklistRepository @Inject constructor(
 
     suspend fun get(packageName: String): BlockedAppEntity? = dao.get(packageName)
 
-    suspend fun setBlocked(packageName: String, delaySeconds: Int = 10, dailyOpenLimit: Int? = null) {
-        dao.upsert(BlockedAppEntity(packageName, delaySeconds, dailyOpenLimit))
+    suspend fun setBlocked(
+        packageName: String,
+        delaySeconds: Int = 10,
+        dailyOpenLimit: Int? = null,
+        dailyTimeBudgetMinutes: Int? = null,
+    ) {
+        dao.upsert(BlockedAppEntity(packageName, delaySeconds, dailyOpenLimit, dailyTimeBudgetMinutes))
     }
 
     suspend fun unblock(packageName: String) {
@@ -48,6 +55,15 @@ class BlocklistRepository @Inject constructor(
             .toInstant()
             .toEpochMilli()
         return dao.countOpensSince(entity.packageName, startOfDay) < limit
+    }
+
+    /** True if this app has no daily time budget, or today's foreground time is still under it. */
+    suspend fun withinTimeBudget(entity: BlockedAppEntity): Boolean {
+        val budgetMinutes = entity.dailyTimeBudgetMinutes ?: return true
+        val usedMillis = usageRepository.today().perApp
+            .firstOrNull { it.packageName == entity.packageName }
+            ?.foregroundMillis ?: 0L
+        return usedMillis < budgetMinutes * 60_000L
     }
 
     companion object {
