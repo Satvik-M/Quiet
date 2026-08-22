@@ -40,6 +40,7 @@ class SettingsRepository @Inject constructor(
         val MANUAL_FOCUS_LOCKED = booleanPreferencesKey("manual_focus_locked")
         val DAILY_GOAL_MINUTES = intPreferencesKey("daily_goal_minutes")
         val NOTIFICATION_DIGEST_ENABLED = booleanPreferencesKey("notification_digest_enabled")
+        val FOCUS_RECAP_ENABLED = booleanPreferencesKey("focus_recap_enabled")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     }
 
@@ -62,6 +63,8 @@ class SettingsRepository @Inject constructor(
     val dailyGoalMinutes: Flow<Int?> = context.appSettingsDataStore.data.map { it[Keys.DAILY_GOAL_MINUTES] }
     /** When on, [com.satvikm.quiet.service.NotificationFilterService] stores the title/text of muted notifications so the digest screen can show what was suppressed, not just how many. */
     val notificationDigestEnabled: Flow<Boolean> = context.appSettingsDataStore.data.map { it[Keys.NOTIFICATION_DIGEST_ENABLED] ?: false }
+    /** Whether [com.satvikm.quiet.data.focus.FocusModeOrchestrator] posts a summary notification when a focus session ends. */
+    val focusRecapEnabled: Flow<Boolean> = context.appSettingsDataStore.data.map { it[Keys.FOCUS_RECAP_ENABLED] ?: false }
     val onboardingCompleted: Flow<Boolean> = context.appSettingsDataStore.data.map { it[Keys.ONBOARDING_COMPLETED] ?: false }
 
     suspend fun setThemeMode(mode: ThemeMode) = set(Keys.THEME_MODE, mode.name)
@@ -128,6 +131,9 @@ class SettingsRepository @Inject constructor(
     }
     suspend fun setNotificationDigestEnabled(enabled: Boolean) {
         context.appSettingsDataStore.edit { it[Keys.NOTIFICATION_DIGEST_ENABLED] = enabled }
+    }
+    suspend fun setFocusRecapEnabled(enabled: Boolean) {
+        context.appSettingsDataStore.edit { it[Keys.FOCUS_RECAP_ENABLED] = enabled }
     }
     suspend fun setOnboardingCompleted(completed: Boolean) {
         context.appSettingsDataStore.edit { it[Keys.ONBOARDING_COMPLETED] = completed }

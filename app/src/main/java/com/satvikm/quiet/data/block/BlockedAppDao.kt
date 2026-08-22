@@ -24,6 +24,9 @@ abstract class BlockedAppDao {
     @Query("DELETE FROM blocked_apps")
     abstract suspend fun deleteAll()
 
+    @Query("DELETE FROM blocked_apps WHERE pendingRemovalAtMillis IS NOT NULL AND pendingRemovalAtMillis <= :nowMillis")
+    abstract suspend fun deleteExpiredPendingRemovals(nowMillis: Long)
+
     @Insert
     abstract suspend fun logOpen(entity: AppOpenEntity)
 

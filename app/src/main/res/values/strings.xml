@@ -33,6 +33,7 @@
     <string name="set_as_swipe_right_app">Set as swipe-right app</string>
     <string name="remove_friction">Remove friction</string>
     <string name="add_friction">Add friction</string>
+    <string name="removal_cooldown_toast">Friction removes in 10 min — cancel in Settings</string>
     <string name="unmute_notifications">Unmute notifications</string>
     <string name="mute_notifications">Mute notifications</string>
     <string name="app_info">App info</string>
@@ -83,6 +84,7 @@
     <string name="time_budget_value">Time budget: %1$dm</string>
     <string name="ask_why_off">Ask why: off</string>
     <string name="ask_why_on">Ask why: on</string>
+    <string name="removing_in_label">Removing in %1$dm — cancel</string>
     <string name="focus_schedules_section">Focus schedules</string>
     <string name="focus_schedules_hint">During these windows, friction apps get a longer delay and no \"Continue\"</string>
     <string name="add_schedule">Add schedule</string>
@@ -102,6 +104,13 @@
     <string name="focus_lock_hint">Locked until the timer runs out</string>
     <string name="start_focus">Start focus</string>
     <string name="focus_locked_toast">Locked — %1$d min left</string>
+    <string name="focus_recap_label">Recap when focus ends</string>
+    <string name="focus_recap_hint">Notifies you with a short summary when a focus session (scheduled or manual) ends</string>
+    <string name="focus_recap_permission_denied_hint">Notifications are off for Quiet — tap to enable them in system Settings</string>
+    <string name="focus_recap_channel_name">Focus recap</string>
+    <string name="focus_recap_channel_description">A summary notification when a focus session ends</string>
+    <string name="focus_recap_title">Focus ended</string>
+    <string name="focus_recap_text">You were focused for %1$s</string>
     <string name="quick_settings_focus_tile_label">Focus</string>
     <string name="hidden_apps_section">Hidden apps</string>
     <string name="hidden_apps_empty_hint">Long-press an app in the drawer to hide it</string>
@@ -183,6 +192,7 @@
     <string name="onboarding_usage_access">Usage access — screen time</string>
     <string name="onboarding_accessibility">Accessibility — lock screen &amp; notification gestures</string>
     <string name="onboarding_notification_access">Notification access — mute apps</string>
+    <string name="onboarding_post_notifications">Notifications — focus recaps</string>
     <string name="granted_label">Granted</string>
     <string name="grant_action">Grant</string>
     <string name="onboarding_done_title">You\'re set</string>

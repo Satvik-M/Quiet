@@ -77,9 +77,10 @@ class DrawerViewModel @Inject constructor(
         viewModelScope.launch { gestureSettingsRepository.setAppFor(slot, app.id) }
     }
 
+    /** Turning friction on is immediate; turning it off starts a cooldown (see [BlocklistRepository.requestRemoval]) rather than removing it on the spot. */
     fun setBlocked(app: LaunchableApp, blocked: Boolean) {
         viewModelScope.launch {
-            if (blocked) blocklistRepository.setBlocked(app.packageName) else blocklistRepository.unblock(app.packageName)
+            if (blocked) blocklistRepository.setBlocked(app.packageName) else blocklistRepository.requestRemoval(app.packageName)
         }
     }
 

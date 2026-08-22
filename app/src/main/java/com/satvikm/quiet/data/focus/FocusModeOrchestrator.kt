@@ -7,6 +7,7 @@ import com.satvikm.quiet.data.apps.AppRepository
 import com.satvikm.quiet.data.favorites.FavoritesRepository
 import com.satvikm.quiet.data.settings.SettingsRepository
 import com.satvikm.quiet.util.isWriteSecureSettingsGranted
+import com.satvikm.quiet.util.postFocusRecapNotification
 import com.satvikm.quiet.util.setSystemGrayscale
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
@@ -29,6 +30,9 @@ class FocusModeOrchestrator @Inject constructor(
     /** Whether grayscale/auto-mute are currently applied — tracked separately from the schedule's own active/inactive state, since automation can be toggled off mid-window and effects must revert immediately rather than waiting for the schedule to end. */
     private var effectsApplied = false
 
+    /** Wall-clock time the current session's effects were applied — used to report session length in the recap notification. Null when no session is running; lives only as long as the process does, which is fine for an informational recap (unlike the commitment-lock timer, nothing depends on this surviving a process death). */
+    private var sessionStartMillis: Long? = null
+
     /** Reconciles applied effects against the schedule state, the automation toggle, and the ad-hoc manual override on every poll tick — call with the schedule's current active/inactive state. */
     suspend fun poll(scheduleActive: Boolean) {
         settingsRepository.clearExpiredManualFocus()
@@ -41,6 +45,7 @@ class FocusModeOrchestrator @Inject constructor(
     }
 
     private suspend fun enterFocus() {
+        sessionStartMillis = System.currentTimeMillis()
         if (isWriteSecureSettingsGranted(context)) {
             setSystemGrayscale(context, true)
         }
@@ -57,6 +62,12 @@ class FocusModeOrchestrator @Inject constructor(
             setSystemGrayscale(context, settingsRepository.grayscaleEnabled.first())
         }
         focusAutoMuteRepository.clearAll()
+
+        val startedAt = sessionStartMillis
+        sessionStartMillis = null
+        if (startedAt != null && settingsRepository.focusRecapEnabled.first()) {
+            postFocusRecapNotification(context, System.currentTimeMillis() - startedAt)
+        }
     }
 
     private fun defaultDialerAndSmsPackages(): Set<String> {

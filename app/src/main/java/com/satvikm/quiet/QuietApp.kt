@@ -2,6 +2,7 @@ package com.satvikm.quiet
 
 import android.app.Application
 import com.satvikm.quiet.data.apps.AppRepository
+import com.satvikm.quiet.util.createFocusRecapNotificationChannel
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -13,5 +14,6 @@ class QuietApp : Application() {
     override fun onCreate() {
         super.onCreate()
         appRepository.start()
+        createFocusRecapNotificationChannel(this)
     }
 }

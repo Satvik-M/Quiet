@@ -1,5 +1,6 @@
 package com.satvikm.quiet.ui.drawer
 
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
@@ -60,6 +61,7 @@ fun DrawerScreen(
     val blockedPackageNames by viewModel.blockedPackageNames.collectAsStateWithLifecycle()
     val mutedPackageNames by viewModel.mutedPackageNames.collectAsStateWithLifecycle()
     val onBackground = MaterialTheme.colorScheme.onBackground
+    val removalCooldownMessage = stringResource(R.string.removal_cooldown_toast)
 
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -184,7 +186,9 @@ fun DrawerScreen(
                         DropdownMenuItem(
                             text = { Text(stringResource(if (app.packageName in blockedPackageNames) R.string.remove_friction else R.string.add_friction)) },
                             onClick = {
-                                viewModel.setBlocked(app, app.packageName !in blockedPackageNames)
+                                val wasBlocked = app.packageName in blockedPackageNames
+                                viewModel.setBlocked(app, !wasBlocked)
+                                if (wasBlocked) Toast.makeText(context, removalCooldownMessage, Toast.LENGTH_LONG).show()
                                 menuTarget = null
                             },
                         )

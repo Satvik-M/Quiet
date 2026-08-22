@@ -21,6 +21,9 @@
         android:name="android.permission.WRITE_SECURE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
 
+    <!-- Runtime-requested on API 33+ (Settings > Focus recap, or onboarding); posts the "focus session ended" recap notification. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!--
       Package visibility (API 30+): declaring that we query LAUNCHER
       activities grants implicit visibility into every launchable app's

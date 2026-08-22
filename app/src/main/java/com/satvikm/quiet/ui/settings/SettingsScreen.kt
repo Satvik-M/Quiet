@@ -1,6 +1,10 @@
 package com.satvikm.quiet.ui.settings
 
+import android.Manifest
+import android.os.Build
 import android.text.format.DateFormat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -43,8 +47,10 @@ import com.satvikm.quiet.data.settings.GestureSlot
 import com.satvikm.quiet.data.settings.HomeAlignment
 import com.satvikm.quiet.data.settings.ThemeMode
 import com.satvikm.quiet.domain.model.LaunchableApp
+import com.satvikm.quiet.util.appNotificationSettingsIntent
 import com.satvikm.quiet.util.grayscaleGrantCommand
 import com.satvikm.quiet.util.isNotificationAccessGranted
+import com.satvikm.quiet.util.isPostNotificationsGranted
 import com.satvikm.quiet.util.isWriteSecureSettingsGranted
 import com.satvikm.quiet.util.notificationListenerSettingsIntent
 
@@ -72,23 +78,29 @@ fun SettingsScreen(
     val focusSchedules by viewModel.focusSchedules.collectAsStateWithLifecycle()
     val focusAutomationEnabled by viewModel.focusAutomationEnabled.collectAsStateWithLifecycle()
     val showFocusStatus by viewModel.showFocusStatus.collectAsStateWithLifecycle()
+    val focusRecapEnabled by viewModel.focusRecapEnabled.collectAsStateWithLifecycle()
     val hiddenApps by viewModel.hiddenApps.collectAsStateWithLifecycle()
     val onBackground = MaterialTheme.colorScheme.onBackground
 
     val context = LocalContext.current
     var notificationAccessGranted by remember { mutableStateOf(isNotificationAccessGranted(context)) }
     var writeSecureSettingsGranted by remember { mutableStateOf(isWriteSecureSettingsGranted(context)) }
+    var postNotificationsGranted by remember { mutableStateOf(isPostNotificationsGranted(context)) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 notificationAccessGranted = isNotificationAccessGranted(context)
                 writeSecureSettingsGranted = isWriteSecureSettingsGranted(context)
+                postNotificationsGranted = isPostNotificationsGranted(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
+    val requestPostNotifications = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted -> postNotificationsGranted = granted }
 
     Column(
         modifier = Modifier
@@ -173,6 +185,7 @@ fun SettingsScreen(
                     onCycleTimeBudget = { viewModel.cycleTimeBudget(app) },
                     onToggleRequireIntention = { viewModel.toggleRequireIntention(app) },
                     onRemove = { viewModel.removeBlocked(app) },
+                    onCancelRemoval = { viewModel.cancelRemoval(app) },
                 )
             }
         }
@@ -243,6 +256,35 @@ fun SettingsScreen(
             selectedIndex = if (showFocusStatus) 1 else 0,
             onSelect = { viewModel.setShowFocusStatus(it == 1) },
         )
+        SettingRow(
+            label = stringResource(R.string.focus_recap_label),
+            options = listOf(stringResource(R.string.off), stringResource(R.string.on)),
+            selectedIndex = if (focusRecapEnabled) 1 else 0,
+            onSelect = { index ->
+                val enable = index == 1
+                if (enable && !postNotificationsGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    requestPostNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+                viewModel.setFocusRecapEnabled(enable)
+            },
+        )
+        if (focusRecapEnabled && !postNotificationsGranted) {
+            Text(
+                text = stringResource(R.string.focus_recap_permission_denied_hint),
+                color = onBackground.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .clickable { context.startActivity(appNotificationSettingsIntent(context)) }
+                    .padding(bottom = 8.dp),
+            )
+        } else {
+            Text(
+                text = stringResource(R.string.focus_recap_hint),
+                color = onBackground.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+        }
 
         Text(
             text = stringResource(R.string.notifications_section),
@@ -368,8 +410,10 @@ private fun BlockedAppRow(
     onCycleTimeBudget: () -> Unit,
     onToggleRequireIntention: () -> Unit,
     onRemove: () -> Unit,
+    onCancelRemoval: () -> Unit,
 ) {
     val onBackground = MaterialTheme.colorScheme.onBackground
+    val pendingRemovalAt = app.pendingRemovalAtMillis
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -377,16 +421,26 @@ private fun BlockedAppRow(
         ) {
             Text(
                 text = app.label,
-                color = onBackground,
+                color = if (pendingRemovalAt != null) onBackground.copy(alpha = 0.4f) else onBackground,
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f),
             )
-            Text(
-                text = stringResource(R.string.remove),
-                color = onBackground.copy(alpha = 0.5f),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.clickable(onClick = onRemove),
-            )
+            if (pendingRemovalAt == null) {
+                Text(
+                    text = stringResource(R.string.remove),
+                    color = onBackground.copy(alpha = 0.5f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.clickable(onClick = onRemove),
+                )
+            } else {
+                val remainingMinutes = ((pendingRemovalAt - System.currentTimeMillis()) / 60_000L + 1).coerceAtLeast(0)
+                Text(
+                    text = stringResource(R.string.removing_in_label, remainingMinutes),
+                    color = onBackground.copy(alpha = 0.5f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.clickable(onClick = onCancelRemoval),
+                )
+            }
         }
         Row(modifier = Modifier.padding(top = 4.dp)) {
             Text(
@@ -409,10 +463,10 @@ private fun BlockedAppRow(
                 text = app.dailyTimeBudgetMinutes?.let { stringResource(R.string.time_budget_value, it) } ?: stringResource(R.string.time_budget_none),
                 color = onBackground.copy(alpha = 0.6f),
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier
-                    .clickable(onClick = onCycleTimeBudget)
-                    .padding(end = 20.dp),
+                modifier = Modifier.clickable(onClick = onCycleTimeBudget),
             )
+        }
+        Row(modifier = Modifier.padding(top = 4.dp)) {
             Text(
                 text = if (app.requireIntention) stringResource(R.string.ask_why_on) else stringResource(R.string.ask_why_off),
                 color = onBackground.copy(alpha = 0.6f),

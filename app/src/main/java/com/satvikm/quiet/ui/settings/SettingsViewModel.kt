@@ -34,6 +34,7 @@ data class BlockedAppUi(
     val dailyOpenLimit: Int?,
     val dailyTimeBudgetMinutes: Int?,
     val requireIntention: Boolean,
+    val pendingRemovalAtMillis: Long?,
 )
 
 data class MutedAppUi(
@@ -68,6 +69,7 @@ class SettingsViewModel @Inject constructor(
     val grayscaleEnabled: StateFlow<Boolean> = settingsRepository.grayscaleEnabled.stateIn(viewModelScope, started, false)
     val focusAutomationEnabled: StateFlow<Boolean> = settingsRepository.focusAutomationEnabled.stateIn(viewModelScope, started, false)
     val notificationDigestEnabled: StateFlow<Boolean> = settingsRepository.notificationDigestEnabled.stateIn(viewModelScope, started, false)
+    val focusRecapEnabled: StateFlow<Boolean> = settingsRepository.focusRecapEnabled.stateIn(viewModelScope, started, false)
     val onboardingCompleted: StateFlow<Boolean> = settingsRepository.onboardingCompleted.stateIn(viewModelScope, started, false)
 
     val focusSchedules: StateFlow<List<FocusScheduleEntity>> = focusScheduleRepository.schedules
@@ -90,6 +92,7 @@ class SettingsViewModel @Inject constructor(
                 dailyOpenLimit = entity.dailyOpenLimit,
                 dailyTimeBudgetMinutes = entity.dailyTimeBudgetMinutes,
                 requireIntention = entity.requireIntention,
+                pendingRemovalAtMillis = entity.pendingRemovalAtMillis,
             )
         }.sortedBy { it.label.lowercase() }
     }.stateIn(viewModelScope, started, emptyList())
@@ -170,7 +173,11 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun removeBlocked(app: BlockedAppUi) {
-        viewModelScope.launch { blocklistRepository.unblock(app.packageName) }
+        viewModelScope.launch { blocklistRepository.requestRemoval(app.packageName) }
+    }
+
+    fun cancelRemoval(app: BlockedAppUi) {
+        viewModelScope.launch { blocklistRepository.cancelRemoval(app.packageName) }
     }
 
     fun removeMuted(app: MutedAppUi) {
@@ -200,6 +207,10 @@ class SettingsViewModel @Inject constructor(
 
     fun setNotificationDigestEnabled(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setNotificationDigestEnabled(enabled) }
+    }
+
+    fun setFocusRecapEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setFocusRecapEnabled(enabled) }
     }
 
     fun setOnboardingCompleted(completed: Boolean) {

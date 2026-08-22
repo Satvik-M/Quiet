@@ -1,5 +1,7 @@
 package com.satvikm.quiet.ui.onboarding
 
+import android.Manifest
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -36,6 +38,7 @@ import com.satvikm.quiet.util.createChangeDefaultLauncherIntent
 import com.satvikm.quiet.util.isDefaultLauncher
 import com.satvikm.quiet.util.isGestureAccessibilityServiceEnabled
 import com.satvikm.quiet.util.isNotificationAccessGranted
+import com.satvikm.quiet.util.isPostNotificationsGranted
 import com.satvikm.quiet.util.notificationListenerSettingsIntent
 import com.satvikm.quiet.util.usageAccessSettingsIntent
 
@@ -50,6 +53,7 @@ fun OnboardingScreen(onFinish: () -> Unit, viewModel: OnboardingViewModel = hilt
     var isDefaultLauncherState by remember { mutableStateOf(isDefaultLauncher(context)) }
     var accessibilityGranted by remember { mutableStateOf(isGestureAccessibilityServiceEnabled(context)) }
     var notificationAccessGranted by remember { mutableStateOf(isNotificationAccessGranted(context)) }
+    var postNotificationsGranted by remember { mutableStateOf(isPostNotificationsGranted(context)) }
     val usageAccessGranted by viewModel.usageAccessGranted.collectAsStateWithLifecycle()
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -59,6 +63,7 @@ fun OnboardingScreen(onFinish: () -> Unit, viewModel: OnboardingViewModel = hilt
                 isDefaultLauncherState = isDefaultLauncher(context)
                 accessibilityGranted = isGestureAccessibilityServiceEnabled(context)
                 notificationAccessGranted = isNotificationAccessGranted(context)
+                postNotificationsGranted = isPostNotificationsGranted(context)
                 viewModel.refresh()
             }
         }
@@ -71,6 +76,9 @@ fun OnboardingScreen(onFinish: () -> Unit, viewModel: OnboardingViewModel = hilt
     ) {
         isDefaultLauncherState = isDefaultLauncher(context)
     }
+    val requestPostNotifications = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted -> postNotificationsGranted = granted }
 
     Column(
         modifier = Modifier
@@ -132,6 +140,13 @@ fun OnboardingScreen(onFinish: () -> Unit, viewModel: OnboardingViewModel = hilt
                         granted = notificationAccessGranted,
                         onClick = { context.startActivity(notificationListenerSettingsIntent()) },
                     )
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        PermissionRow(
+                            label = stringResource(R.string.onboarding_post_notifications),
+                            granted = postNotificationsGranted,
+                            onClick = { requestPostNotifications.launch(Manifest.permission.POST_NOTIFICATIONS) },
+                        )
+                    }
                 }
                 3 -> {
                     Text(text = stringResource(R.string.onboarding_done_title), color = onBackground, style = MaterialTheme.typography.headlineSmall)

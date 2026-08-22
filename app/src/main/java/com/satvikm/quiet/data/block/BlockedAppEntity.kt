@@ -13,4 +13,6 @@ data class BlockedAppEntity(
     val dailyTimeBudgetMinutes: Int? = null,
     /** When true, the friction screen requires a typed one-line reason before "Continue" is enabled. */
     val requireIntention: Boolean = false,
+    /** Non-null while a removal cooldown is running — the entry still fully applies until this passes, so removing friction can't be done in one impulsive tap. See [BlocklistRepository.requestRemoval]. */
+    val pendingRemovalAtMillis: Long? = null,
 )

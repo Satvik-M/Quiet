@@ -40,8 +40,23 @@ class BlocklistRepository @Inject constructor(
         dao.upsert(BlockedAppEntity(packageName, delaySeconds, dailyOpenLimit, dailyTimeBudgetMinutes, requireIntention))
     }
 
-    suspend fun unblock(packageName: String) {
-        dao.delete(packageName)
+    /**
+     * Starts a cooldown instead of removing friction immediately — the entry
+     * keeps applying in full (delay, limits, intention prompt) until the
+     * cooldown passes, so disabling friction can't be done in one impulsive
+     * tap. [pruneExpiredRemovals] is what actually deletes it once due.
+     */
+    suspend fun requestRemoval(packageName: String) {
+        dao.get(packageName)?.let { dao.upsert(it.copy(pendingRemovalAtMillis = System.currentTimeMillis() + REMOVAL_COOLDOWN_MS)) }
+    }
+
+    suspend fun cancelRemoval(packageName: String) {
+        dao.get(packageName)?.let { dao.upsert(it.copy(pendingRemovalAtMillis = null)) }
+    }
+
+    /** Deletes any entry whose removal cooldown has passed — called from the background poll loop so it takes effect with no UI open. */
+    suspend fun pruneExpiredRemovals() {
+        dao.deleteExpiredPendingRemovals(System.currentTimeMillis())
     }
 
     /** Replaces the entire friction list with [entities] — used by backup restore. */
@@ -75,5 +90,6 @@ class BlocklistRepository @Inject constructor(
 
     companion object {
         const val GRACE_DURATION_MS = 2 * 60_000L
+        const val REMOVAL_COOLDOWN_MS = 10 * 60_000L
     }
 }

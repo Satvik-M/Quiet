@@ -80,6 +80,7 @@ class GestureAccessibilityService : AccessibilityService() {
         serviceScope.launch {
             while (isActive) {
                 pollFocusNow()
+                pruneBlocklistRemovals()
                 delay(FOCUS_POLL_INTERVAL_MS)
             }
         }
@@ -90,6 +91,14 @@ class GestureAccessibilityService : AccessibilityService() {
             focusModeOrchestrator.poll(focusScheduleRepository.isFocusActiveNow())
         } catch (e: Exception) {
             Log.w(TAG, "Focus mode poll failed", e)
+        }
+    }
+
+    private suspend fun pruneBlocklistRemovals() {
+        try {
+            blocklistRepository.pruneExpiredRemovals()
+        } catch (e: Exception) {
+            Log.w(TAG, "Blocklist removal prune failed", e)
         }
     }
 

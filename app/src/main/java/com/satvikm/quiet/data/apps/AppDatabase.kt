@@ -30,7 +30,7 @@ import com.satvikm.quiet.data.notifications.MutedNotificationEntity
         FocusAutoMutedAppEntity::class,
         GraceEntity::class,
     ],
-    version = 11,
+    version = 12,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
