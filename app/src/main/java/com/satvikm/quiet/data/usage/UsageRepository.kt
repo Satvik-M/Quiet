@@ -125,4 +125,14 @@ class UsageRepository @Inject constructor(
         }
         return count
     }
+
+    companion object {
+        /** Per-app totals across [days] of [lastDays] output, summed and ranked highest-first — for a "most used this week/month" view rather than a single day's breakdown. */
+        fun topApps(days: List<Pair<LocalDate, DailyUsage>>, limit: Int = 8): List<AppUsage> =
+            days.flatMap { it.second.perApp }
+                .groupBy { it.packageName }
+                .map { (packageName, usages) -> AppUsage(packageName, usages.sumOf { it.foregroundMillis }) }
+                .sortedByDescending { it.foregroundMillis }
+                .take(limit)
+    }
 }

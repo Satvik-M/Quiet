@@ -93,7 +93,8 @@ class BackupRepository @Inject constructor(
                     .put("packageName", app.packageName)
                     .put("delaySeconds", app.delaySeconds)
                     .put("dailyOpenLimit", app.dailyOpenLimit ?: JSONObject.NULL)
-                    .put("dailyTimeBudgetMinutes", app.dailyTimeBudgetMinutes ?: JSONObject.NULL),
+                    .put("dailyTimeBudgetMinutes", app.dailyTimeBudgetMinutes ?: JSONObject.NULL)
+                    .put("requireIntention", app.requireIntention),
             )
         }
 
@@ -166,6 +167,7 @@ class BackupRepository @Inject constructor(
                         delaySeconds = o.optInt("delaySeconds", 10),
                         dailyOpenLimit = if (o.has("dailyOpenLimit") && !o.isNull("dailyOpenLimit")) o.getInt("dailyOpenLimit") else null,
                         dailyTimeBudgetMinutes = if (o.has("dailyTimeBudgetMinutes") && !o.isNull("dailyTimeBudgetMinutes")) o.getInt("dailyTimeBudgetMinutes") else null,
+                        requireIntention = o.optBoolean("requireIntention", false),
                     )
                 } ?: emptyList(),
             )

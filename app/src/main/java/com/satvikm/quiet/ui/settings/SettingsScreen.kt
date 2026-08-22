@@ -171,6 +171,7 @@ fun SettingsScreen(
                     onCycleDelay = { viewModel.cycleDelay(app) },
                     onCycleDailyLimit = { viewModel.cycleDailyLimit(app) },
                     onCycleTimeBudget = { viewModel.cycleTimeBudget(app) },
+                    onToggleRequireIntention = { viewModel.toggleRequireIntention(app) },
                     onRemove = { viewModel.removeBlocked(app) },
                 )
             }
@@ -365,6 +366,7 @@ private fun BlockedAppRow(
     onCycleDelay: () -> Unit,
     onCycleDailyLimit: () -> Unit,
     onCycleTimeBudget: () -> Unit,
+    onToggleRequireIntention: () -> Unit,
     onRemove: () -> Unit,
 ) {
     val onBackground = MaterialTheme.colorScheme.onBackground
@@ -407,7 +409,15 @@ private fun BlockedAppRow(
                 text = app.dailyTimeBudgetMinutes?.let { stringResource(R.string.time_budget_value, it) } ?: stringResource(R.string.time_budget_none),
                 color = onBackground.copy(alpha = 0.6f),
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.clickable(onClick = onCycleTimeBudget),
+                modifier = Modifier
+                    .clickable(onClick = onCycleTimeBudget)
+                    .padding(end = 20.dp),
+            )
+            Text(
+                text = if (app.requireIntention) stringResource(R.string.ask_why_on) else stringResource(R.string.ask_why_off),
+                color = onBackground.copy(alpha = 0.6f),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.clickable(onClick = onToggleRequireIntention),
             )
         }
     }

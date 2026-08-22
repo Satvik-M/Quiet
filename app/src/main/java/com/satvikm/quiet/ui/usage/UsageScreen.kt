@@ -45,7 +45,11 @@ fun UsageScreen(onBack: () -> Unit, viewModel: UsageViewModel = hiltViewModel())
     val daily by viewModel.daily.collectAsStateWithLifecycle()
     val granted by viewModel.usageAccessGranted.collectAsStateWithLifecycle()
     val labels by viewModel.appLabels.collectAsStateWithLifecycle()
-    val weekly by viewModel.weekly.collectAsStateWithLifecycle()
+    val period by viewModel.period.collectAsStateWithLifecycle()
+    val range by viewModel.range.collectAsStateWithLifecycle()
+    val topApps by viewModel.topApps.collectAsStateWithLifecycle()
+    val avgMillisPerDay by viewModel.avgMillisPerDay.collectAsStateWithLifecycle()
+    val avgUnlocksPerDay by viewModel.avgUnlocksPerDay.collectAsStateWithLifecycle()
     val dailyGoalMinutes by viewModel.dailyGoalMinutes.collectAsStateWithLifecycle()
     val streak by viewModel.streak.collectAsStateWithLifecycle()
     val onBackground = MaterialTheme.colorScheme.onBackground
@@ -115,15 +119,56 @@ fun UsageScreen(onBack: () -> Unit, viewModel: UsageViewModel = hiltViewModel())
             }
         }
 
+        SettingRow(
+            label = stringResource(R.string.period_label),
+            options = listOf(stringResource(R.string.period_week), stringResource(R.string.period_month)),
+            selectedIndex = period.ordinal,
+            onSelect = { viewModel.setPeriod(UsagePeriod.entries[it]) },
+        )
+
         Text(
-            text = stringResource(R.string.week_title),
+            text = stringResource(if (period == UsagePeriod.WEEK) R.string.week_title else R.string.month_title),
             color = onBackground.copy(alpha = 0.6f),
             style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(top = 24.dp, bottom = 4.dp),
+            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
         )
-        val maxWeeklyMillis = weekly.maxOfOrNull { it.second.totalMillis }?.coerceAtLeast(1L) ?: 1L
-        weekly.forEach { (date, usage) ->
-            WeekDayRow(date = date, usage = usage, maxMillis = maxWeeklyMillis)
+        val maxRangeMillis = range.maxOfOrNull { it.second.totalMillis }?.coerceAtLeast(1L) ?: 1L
+        range.forEach { (date, usage) ->
+            TrendDayRow(date = date, usage = usage, maxMillis = maxRangeMillis, showDayOfMonth = period == UsagePeriod.MONTH)
+        }
+        Text(
+            text = stringResource(R.string.avg_per_day_label, formatDuration(avgMillisPerDay)),
+            color = onBackground.copy(alpha = 0.6f),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+        Text(
+            text = stringResource(R.string.avg_unlocks_label, avgUnlocksPerDay),
+            color = onBackground.copy(alpha = 0.6f),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+
+        if (topApps.isNotEmpty()) {
+            Text(
+                text = stringResource(R.string.most_used_title),
+                color = onBackground.copy(alpha = 0.6f),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 24.dp, bottom = 4.dp),
+            )
+            topApps.forEachIndexed { index, usage ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = "${index + 1}. ${labels[usage.packageName] ?: usage.packageName}",
+                        color = onBackground,
+                    )
+                    Text(text = formatDuration(usage.foregroundMillis), color = onBackground.copy(alpha = 0.7f))
+                }
+            }
         }
 
         val goalOptions = listOf(null, 60, 120, 180, 240)
@@ -150,9 +195,9 @@ fun UsageScreen(onBack: () -> Unit, viewModel: UsageViewModel = hiltViewModel())
 }
 
 @Composable
-private fun WeekDayRow(date: LocalDate, usage: DailyUsage, maxMillis: Long) {
+private fun TrendDayRow(date: LocalDate, usage: DailyUsage, maxMillis: Long, showDayOfMonth: Boolean) {
     val onBackground = MaterialTheme.colorScheme.onBackground
-    val label = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+    val label = if (showDayOfMonth) date.dayOfMonth.toString() else date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
     val fraction = (usage.totalMillis.toFloat() / maxMillis.toFloat()).coerceIn(0f, 1f)
     Row(
         modifier = Modifier

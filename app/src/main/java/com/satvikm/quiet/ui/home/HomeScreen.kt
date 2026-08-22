@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -37,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -45,6 +47,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.satvikm.quiet.R
 import com.satvikm.quiet.data.settings.HomeAlignment
 import com.satvikm.quiet.domain.model.LaunchableApp
+import com.satvikm.quiet.ui.common.SettingRow
 import com.satvikm.quiet.util.accessibilitySettingsIntent
 import com.satvikm.quiet.util.expandNotifications
 import com.satvikm.quiet.util.isGestureAccessibilityServiceEnabled
@@ -78,6 +81,9 @@ fun HomeScreen(
     val showFocusStatus by viewModel.showFocusStatus.collectAsStateWithLifecycle()
     val focusActive by viewModel.focusActive.collectAsStateWithLifecycle()
     val manualFocusActive by viewModel.manualFocusActive.collectAsStateWithLifecycle()
+    val manualFocusEndsAtMillis by viewModel.manualFocusEndsAtMillis.collectAsStateWithLifecycle()
+    val manualFocusLocked by viewModel.manualFocusLocked.collectAsStateWithLifecycle()
+    var showFocusStartDialog by remember { mutableStateOf(false) }
 
     val timeFormatter = remember(context) {
         DateTimeFormatter.ofPattern(if (DateFormat.is24HourFormat(context)) "H:mm" else "h:mm")
@@ -209,10 +215,31 @@ fun HomeScreen(
         )
 
         Text(
-            text = stringResource(if (manualFocusActive) R.string.end_focus_now else R.string.focus_now),
+            text = when {
+                !manualFocusActive -> stringResource(R.string.focus_now)
+                manualFocusLocked -> stringResource(R.string.end_focus_now_locked)
+                else -> stringResource(R.string.end_focus_now)
+            },
             color = onBackground.copy(alpha = 0.7f),
             modifier = Modifier
-                .clickable(onClick = viewModel::toggleFocusNow)
+                .clickable {
+                    if (manualFocusActive) {
+                        viewModel.endFocus { ended ->
+                            if (!ended) {
+                                val remainingMinutes = manualFocusEndsAtMillis
+                                    ?.let { ((it - System.currentTimeMillis()) / 60_000L + 1).coerceAtLeast(1) }
+                                    ?: 1L
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.focus_locked_toast, remainingMinutes.toInt()),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            }
+                        }
+                    } else {
+                        showFocusStartDialog = true
+                    }
+                }
                 .padding(vertical = 8.dp),
         )
 
@@ -225,6 +252,74 @@ fun HomeScreen(
                     .clickable { context.startActivity(accessibilitySettingsIntent()) }
                     .padding(top = 4.dp),
             )
+        }
+    }
+
+    if (showFocusStartDialog) {
+        FocusStartDialog(
+            onStart = { durationMinutes, locked ->
+                viewModel.startFocus(durationMinutes, locked)
+                showFocusStartDialog = false
+            },
+            onDismiss = { showFocusStartDialog = false },
+        )
+    }
+}
+
+/** Duration options for an ad-hoc focus session, paired with whether the session can be locked (an unbounded session has no timer to unlock it against, so locking it would mean no way to ever end it). */
+private val FOCUS_DURATION_OPTIONS: List<Int?> = listOf(15, 25, 45, 60, null)
+
+@Composable
+private fun FocusStartDialog(
+    onStart: (durationMinutes: Int?, locked: Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val onBackground = MaterialTheme.colorScheme.onBackground
+    var selectedDuration by remember { mutableStateOf<Int?>(FOCUS_DURATION_OPTIONS.first()) }
+    var locked by remember { mutableStateOf(false) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(text = stringResource(R.string.focus_now), color = onBackground, style = MaterialTheme.typography.titleLarge)
+
+                SettingRow(
+                    label = stringResource(R.string.focus_duration_label),
+                    options = FOCUS_DURATION_OPTIONS.map { minutes ->
+                        minutes?.let { stringResource(R.string.duration_minutes, it) } ?: stringResource(R.string.focus_until_i_stop_it)
+                    },
+                    selectedIndex = FOCUS_DURATION_OPTIONS.indexOf(selectedDuration).coerceAtLeast(0),
+                    onSelect = { index ->
+                        selectedDuration = FOCUS_DURATION_OPTIONS[index]
+                        if (selectedDuration == null) locked = false
+                    },
+                )
+
+                if (selectedDuration != null) {
+                    SettingRow(
+                        label = stringResource(R.string.focus_lock_label),
+                        options = listOf(stringResource(R.string.off), stringResource(R.string.on)),
+                        selectedIndex = if (locked) 1 else 0,
+                        onSelect = { locked = it == 1 },
+                    )
+                    if (locked) {
+                        Text(
+                            text = stringResource(R.string.focus_lock_hint),
+                            color = onBackground.copy(alpha = 0.5f),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+
+                Text(
+                    text = stringResource(R.string.start_focus),
+                    color = onBackground,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier
+                        .clickable { onStart(selectedDuration, locked) }
+                        .padding(top = 20.dp),
+                )
+            }
         }
     }
 }

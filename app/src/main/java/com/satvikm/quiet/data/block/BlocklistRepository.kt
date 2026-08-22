@@ -35,8 +35,9 @@ class BlocklistRepository @Inject constructor(
         delaySeconds: Int = 10,
         dailyOpenLimit: Int? = null,
         dailyTimeBudgetMinutes: Int? = null,
+        requireIntention: Boolean = false,
     ) {
-        dao.upsert(BlockedAppEntity(packageName, delaySeconds, dailyOpenLimit, dailyTimeBudgetMinutes))
+        dao.upsert(BlockedAppEntity(packageName, delaySeconds, dailyOpenLimit, dailyTimeBudgetMinutes, requireIntention))
     }
 
     suspend fun unblock(packageName: String) {

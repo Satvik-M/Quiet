@@ -31,6 +31,7 @@ class FocusModeOrchestrator @Inject constructor(
 
     /** Reconciles applied effects against the schedule state, the automation toggle, and the ad-hoc manual override on every poll tick — call with the schedule's current active/inactive state. */
     suspend fun poll(scheduleActive: Boolean) {
+        settingsRepository.clearExpiredManualFocus()
         val manualActive = settingsRepository.manualFocusActive.first()
         val scheduleApplies = scheduleActive && settingsRepository.focusAutomationEnabled.first()
         val shouldApply = manualActive || scheduleApplies

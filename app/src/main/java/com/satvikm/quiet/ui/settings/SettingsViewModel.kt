@@ -33,6 +33,7 @@ data class BlockedAppUi(
     val delaySeconds: Int,
     val dailyOpenLimit: Int?,
     val dailyTimeBudgetMinutes: Int?,
+    val requireIntention: Boolean,
 )
 
 data class MutedAppUi(
@@ -88,6 +89,7 @@ class SettingsViewModel @Inject constructor(
                 delaySeconds = entity.delaySeconds,
                 dailyOpenLimit = entity.dailyOpenLimit,
                 dailyTimeBudgetMinutes = entity.dailyTimeBudgetMinutes,
+                requireIntention = entity.requireIntention,
             )
         }.sortedBy { it.label.lowercase() }
     }.stateIn(viewModelScope, started, emptyList())
@@ -148,17 +150,23 @@ class SettingsViewModel @Inject constructor(
 
     fun cycleDelay(app: BlockedAppUi) {
         val next = DELAY_OPTIONS[(DELAY_OPTIONS.indexOf(app.delaySeconds).coerceAtLeast(0) + 1) % DELAY_OPTIONS.size]
-        viewModelScope.launch { blocklistRepository.setBlocked(app.packageName, next, app.dailyOpenLimit, app.dailyTimeBudgetMinutes) }
+        viewModelScope.launch { blocklistRepository.setBlocked(app.packageName, next, app.dailyOpenLimit, app.dailyTimeBudgetMinutes, app.requireIntention) }
     }
 
     fun cycleDailyLimit(app: BlockedAppUi) {
         val next = DAILY_LIMIT_OPTIONS[(DAILY_LIMIT_OPTIONS.indexOf(app.dailyOpenLimit).coerceAtLeast(0) + 1) % DAILY_LIMIT_OPTIONS.size]
-        viewModelScope.launch { blocklistRepository.setBlocked(app.packageName, app.delaySeconds, next, app.dailyTimeBudgetMinutes) }
+        viewModelScope.launch { blocklistRepository.setBlocked(app.packageName, app.delaySeconds, next, app.dailyTimeBudgetMinutes, app.requireIntention) }
     }
 
     fun cycleTimeBudget(app: BlockedAppUi) {
         val next = TIME_BUDGET_OPTIONS[(TIME_BUDGET_OPTIONS.indexOf(app.dailyTimeBudgetMinutes).coerceAtLeast(0) + 1) % TIME_BUDGET_OPTIONS.size]
-        viewModelScope.launch { blocklistRepository.setBlocked(app.packageName, app.delaySeconds, app.dailyOpenLimit, next) }
+        viewModelScope.launch { blocklistRepository.setBlocked(app.packageName, app.delaySeconds, app.dailyOpenLimit, next, app.requireIntention) }
+    }
+
+    fun toggleRequireIntention(app: BlockedAppUi) {
+        viewModelScope.launch {
+            blocklistRepository.setBlocked(app.packageName, app.delaySeconds, app.dailyOpenLimit, app.dailyTimeBudgetMinutes, !app.requireIntention)
+        }
     }
 
     fun removeBlocked(app: BlockedAppUi) {

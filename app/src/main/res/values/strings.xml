@@ -81,6 +81,8 @@
     <string name="daily_limit_value">Daily limit: %1$d</string>
     <string name="time_budget_none">Time budget: none</string>
     <string name="time_budget_value">Time budget: %1$dm</string>
+    <string name="ask_why_off">Ask why: off</string>
+    <string name="ask_why_on">Ask why: on</string>
     <string name="focus_schedules_section">Focus schedules</string>
     <string name="focus_schedules_hint">During these windows, friction apps get a longer delay and no \"Continue\"</string>
     <string name="add_schedule">Add schedule</string>
@@ -93,6 +95,13 @@
     <string name="focus_active_home">Focus active</string>
     <string name="focus_now">Focus now</string>
     <string name="end_focus_now">End focus</string>
+    <string name="end_focus_now_locked">End focus (locked)</string>
+    <string name="focus_duration_label">Duration</string>
+    <string name="focus_until_i_stop_it">Until I stop it</string>
+    <string name="focus_lock_label">Can\'t end early</string>
+    <string name="focus_lock_hint">Locked until the timer runs out</string>
+    <string name="start_focus">Start focus</string>
+    <string name="focus_locked_toast">Locked — %1$d min left</string>
     <string name="quick_settings_focus_tile_label">Focus</string>
     <string name="hidden_apps_section">Hidden apps</string>
     <string name="hidden_apps_empty_hint">Long-press an app in the drawer to hide it</string>
@@ -128,6 +137,7 @@
     <string name="take_a_breath">Take a breath.</string>
     <string name="close">Close</string>
     <string name="continue_action">Continue</string>
+    <string name="intention_hint">What are you here to do?</string>
 
     <!-- Usage -->
     <string name="today_title">Today</string>
@@ -137,6 +147,13 @@
         <item quantity="other">%1$d unlocks</item>
     </plurals>
     <string name="week_title">This week</string>
+    <string name="month_title">This month</string>
+    <string name="period_label">Period</string>
+    <string name="period_week">Week</string>
+    <string name="period_month">Month</string>
+    <string name="most_used_title">Most used</string>
+    <string name="avg_per_day_label">Avg/day: %1$s</string>
+    <string name="avg_unlocks_label">Avg unlocks/day: %1$d</string>
     <string name="daily_goal_label">Daily goal</string>
     <string name="streak_label">%1$d day streak</string>
 

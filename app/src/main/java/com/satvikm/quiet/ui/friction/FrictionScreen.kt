@@ -6,8 +6,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,7 +21,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.satvikm.quiet.R
 import com.satvikm.quiet.data.block.BlocklistRepository
@@ -44,6 +49,8 @@ fun FrictionScreen(
     var dailyLimitReached by remember { mutableStateOf(false) }
     var timeBudgetReached by remember { mutableStateOf(false) }
     var focusBlocked by remember { mutableStateOf(false) }
+    var requireIntention by remember { mutableStateOf(false) }
+    var intentionText by remember { mutableStateOf("") }
 
     BackHandler(onBack = onClose)
 
@@ -58,6 +65,7 @@ fun FrictionScreen(
         dailyLimitReached = entity?.let { !blocklistRepository.canContinue(it) } ?: false
         timeBudgetReached = entity?.let { !blocklistRepository.withinTimeBudget(it) } ?: false
         focusBlocked = focusActive
+        requireIntention = entity?.requireIntention ?: false
         loaded = true
     }
 
@@ -109,6 +117,32 @@ fun FrictionScreen(
             )
         }
 
+        val eligibleToContinue = !focusBlocked && !dailyLimitReached && !timeBudgetReached
+        if (eligibleToContinue && requireIntention) {
+            BasicTextField(
+                value = intentionText,
+                onValueChange = { intentionText = it },
+                textStyle = TextStyle(color = onBackground, fontSize = MaterialTheme.typography.bodyLarge.fontSize, textAlign = TextAlign.Center),
+                cursorBrush = SolidColor(onBackground),
+                singleLine = true,
+                decorationBox = { innerTextField ->
+                    if (intentionText.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.intention_hint),
+                            color = onBackground.copy(alpha = 0.5f),
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    innerTextField()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 24.dp),
+            )
+        }
+
         Spacer(modifier = Modifier.height(48.dp))
 
         Text(
@@ -120,7 +154,7 @@ fun FrictionScreen(
                 .padding(16.dp),
         )
 
-        if (!focusBlocked && !dailyLimitReached && !timeBudgetReached && secondsLeft == 0) {
+        if (eligibleToContinue && secondsLeft == 0 && (!requireIntention || intentionText.isNotBlank())) {
             Text(
                 text = stringResource(R.string.continue_action),
                 style = MaterialTheme.typography.titleLarge,

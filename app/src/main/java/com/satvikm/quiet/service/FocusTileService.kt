@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/** Toggles the same ad-hoc "Focus now" override as the home screen — see [HomeViewModel][com.satvikm.quiet.ui.home.HomeViewModel.toggleFocusNow]. */
+/** Toggles the same ad-hoc "Focus now" override as the home screen — see [HomeViewModel][com.satvikm.quiet.ui.home.HomeViewModel.startFocus]. A locked session started from the home screen can't be ended from here either. */
 @AndroidEntryPoint
 class FocusTileService : TileService() {
 
@@ -42,7 +42,11 @@ class FocusTileService : TileService() {
         super.onClick()
         listeningScope?.launch {
             val current = settingsRepository.manualFocusActive.first()
-            settingsRepository.setManualFocusActive(!current)
+            if (current) {
+                settingsRepository.endManualFocusIfAllowed()
+            } else {
+                settingsRepository.startManualFocus(durationMinutes = null, locked = false)
+            }
         }
     }
 

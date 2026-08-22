@@ -63,6 +63,8 @@ class HomeViewModel @Inject constructor(
     )
 
     val manualFocusActive: StateFlow<Boolean> = settingsRepository.manualFocusActive.stateIn(viewModelScope, started, false)
+    val manualFocusEndsAtMillis: StateFlow<Long?> = settingsRepository.manualFocusEndsAtMillis.stateIn(viewModelScope, started, null)
+    val manualFocusLocked: StateFlow<Boolean> = settingsRepository.manualFocusLocked.stateIn(viewModelScope, started, false)
     val focusActive: StateFlow<Boolean> = combine(
         focusScheduleRepository.schedules,
         currentTime,
@@ -115,7 +117,12 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch { _mutedCountToday.value = notificationMuteRepository.mutedCountToday() }
     }
 
-    fun toggleFocusNow() {
-        viewModelScope.launch { settingsRepository.setManualFocusActive(!manualFocusActive.value) }
+    fun startFocus(durationMinutes: Int?, locked: Boolean) {
+        viewModelScope.launch { settingsRepository.startManualFocus(durationMinutes, locked) }
+    }
+
+    /** Attempts to end the current manual focus session; [onResult] reports whether it actually ended (false if it's locked and still running), so the caller can explain why nothing happened. */
+    fun endFocus(onResult: (Boolean) -> Unit) {
+        viewModelScope.launch { onResult(settingsRepository.endManualFocusIfAllowed()) }
     }
 }

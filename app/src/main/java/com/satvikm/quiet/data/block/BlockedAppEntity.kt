@@ -11,4 +11,6 @@ data class BlockedAppEntity(
     val dailyOpenLimit: Int? = null,
     /** Null means no daily cap on foreground time; once today's usage reaches this many minutes, "Continue" is hidden until midnight. */
     val dailyTimeBudgetMinutes: Int? = null,
+    /** When true, the friction screen requires a typed one-line reason before "Continue" is enabled. */
+    val requireIntention: Boolean = false,
 )
