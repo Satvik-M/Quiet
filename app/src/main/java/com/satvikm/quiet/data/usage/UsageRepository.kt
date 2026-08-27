@@ -61,25 +61,47 @@ class UsageRepository @Inject constructor(
         val foregroundSince = mutableMapOf<String, Long>()
         val perApp = mutableMapOf<String, Long>()
         var unlockCount = 0
+        var lastEventTimestamp = startOfDay
+
+        fun closeSession(packageName: String, endTimestamp: Long) {
+            val start = foregroundSince.remove(packageName) ?: return
+            if (endTimestamp > start) {
+                perApp[packageName] = (perApp[packageName] ?: 0L) + (endTimestamp - start)
+            }
+        }
 
         val events = usageStatsManager.queryEvents(startOfDay, queryEnd)
         val event = UsageEvents.Event()
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
+            lastEventTimestamp = maxOf(lastEventTimestamp, event.timeStamp)
             when (event.eventType) {
-                UsageEvents.Event.ACTIVITY_RESUMED -> foregroundSince[event.packageName] = event.timeStamp
-                UsageEvents.Event.ACTIVITY_PAUSED -> {
-                    val start = foregroundSince.remove(event.packageName)
-                    if (start != null && event.timeStamp > start) {
-                        perApp[event.packageName] = (perApp[event.packageName] ?: 0L) + (event.timeStamp - start)
+                UsageEvents.Event.ACTIVITY_RESUMED -> {
+                    // Only one app is ever really in the foreground at a time. If some
+                    // other package is still marked open here, its PAUSED event was
+                    // dropped (killed/crashed/OS-throttled) -- close it out now instead
+                    // of leaving it to be blindly credited all the way to midnight below.
+                    foregroundSince.keys.filter { it != event.packageName }.forEach { stale ->
+                        closeSession(stale, event.timeStamp)
                     }
+                    foregroundSince[event.packageName] = event.timeStamp
                 }
+                UsageEvents.Event.ACTIVITY_PAUSED -> closeSession(event.packageName, event.timeStamp)
                 keyguardHiddenEventType -> unlockCount++
             }
         }
-        // Anything still foregrounded (e.g. this app, right now, for today) counts up to queryEnd.
+        // Anything still foregrounded when the loop ends never got a matching PAUSED
+        // event. For today that's expected (e.g. this app, right now) and queryEnd
+        // (= now) is the right bound. For a past, fully-elapsed day there's no such
+        // excuse -- crediting it all the way to midnight is how one dropped event
+        // turns into a ~24h session, so cap it to the last event actually observed
+        // that day instead.
+        val isPastDay = queryEnd == endOfDay
         for ((packageName, start) in foregroundSince) {
-            perApp[packageName] = (perApp[packageName] ?: 0L) + (queryEnd - start)
+            val end = if (isPastDay) maxOf(start, lastEventTimestamp) else queryEnd
+            if (end > start) {
+                perApp[packageName] = (perApp[packageName] ?: 0L) + (end - start)
+            }
         }
 
         // Raw events include system UI components (status bar, keyguard, the
@@ -89,8 +111,14 @@ class UsageRepository @Inject constructor(
         val launchablePackages = appRepository.apps.first().map { it.packageName }.toSet()
         val filteredPerApp = perApp.filterKeys { it in launchablePackages }
 
+        // Safety net: a day only has so many milliseconds in it. This can't fire off
+        // the event-pairing logic above as written, but it guards against any future
+        // regression (or an OS event-stream edge case we haven't seen) silently
+        // producing an impossible total again.
+        val elapsedMillis = queryEnd - startOfDay
+
         DailyUsage(
-            totalMillis = filteredPerApp.values.sum(),
+            totalMillis = filteredPerApp.values.sum().coerceAtMost(elapsedMillis),
             unlockCount = unlockCount,
             perApp = filteredPerApp.map { (packageName, millis) -> AppUsage(packageName, millis) }
                 .sortedByDescending { it.foregroundMillis },
