@@ -1,7 +1,9 @@
 package com.satvikm.quiet.ui.drawer
 
+import android.os.Build
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,10 +43,14 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.satvikm.quiet.R
 import com.satvikm.quiet.data.settings.GestureSlot
 import com.satvikm.quiet.domain.model.LaunchableApp
+import com.satvikm.quiet.ui.common.SettingRow
 import com.satvikm.quiet.util.appInfoIntent
 import com.satvikm.quiet.util.requestUninstall
 
@@ -58,12 +65,15 @@ fun DrawerScreen(
     val query by viewModel.queryText.collectAsStateWithLifecycle()
     val apps by viewModel.filteredApps.collectAsStateWithLifecycle()
     val favoriteIds by viewModel.favoriteIds.collectAsStateWithLifecycle()
-    val workFavoriteIds by viewModel.workFavoriteIds.collectAsStateWithLifecycle()
-    val workAllowedIds by viewModel.workAllowedIds.collectAsStateWithLifecycle()
     val blockedPackageNames by viewModel.blockedPackageNames.collectAsStateWithLifecycle()
     val mutedPackageNames by viewModel.mutedPackageNames.collectAsStateWithLifecycle()
+    val hasWorkProfile by viewModel.hasWorkProfile.collectAsStateWithLifecycle()
+    val selectedProfile by viewModel.selectedProfile.collectAsStateWithLifecycle()
+    val workQuietModeEnabled by viewModel.workQuietModeEnabled.collectAsStateWithLifecycle()
     val onBackground = MaterialTheme.colorScheme.onBackground
     val removalCooldownMessage = stringResource(R.string.removal_cooldown_toast)
+    val resumeManualToastMessage = stringResource(R.string.resume_work_apps_manual_toast)
+    val frozenAppToastMessage = stringResource(R.string.frozen_work_app_toast)
 
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -77,6 +87,18 @@ fun DrawerScreen(
         keyboardController?.show()
     }
 
+    // Quiet-mode state isn't wired to a live broadcast (see DrawerViewModel doc comment on
+    // workQuietModeEnabled) — re-check it whenever this screen resumes, e.g. after the user
+    // toggled it from system Settings while this drawer was backgrounded.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.refreshWorkQuietMode()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
         if (pickForGesture != null) {
             Text(
@@ -88,6 +110,39 @@ fun DrawerScreen(
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
             )
         }
+
+        if (hasWorkProfile) {
+            SettingRow(
+                label = "",
+                options = listOf(stringResource(R.string.personal_tab), stringResource(R.string.work_tab)),
+                selectedIndex = if (selectedProfile == DrawerProfile.WORK) 1 else 0,
+                onSelect = { index ->
+                    viewModel.selectProfile(if (index == 1) DrawerProfile.WORK else DrawerProfile.PERSONAL)
+                },
+            )
+
+            if (selectedProfile == DrawerProfile.WORK && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                Text(
+                    text = stringResource(if (workQuietModeEnabled) R.string.resume_work_apps else R.string.pause_work_apps),
+                    color = onBackground.copy(alpha = 0.6f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier
+                        .clickable {
+                            val wasResuming = workQuietModeEnabled
+                            viewModel.togglePauseWorkApps { succeeded ->
+                                // Only the resume direction has a known, documented failure mode
+                                // (API 28-29 needing credential confirmation this call can't
+                                // trigger) — see WorkProfileManager.resumeWorkApps.
+                                if (wasResuming && !succeeded) {
+                                    Toast.makeText(context, resumeManualToastMessage, Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        }
+                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                )
+            }
+        }
+
         BasicTextField(
             value = query,
             onValueChange = viewModel::onQueryChange,
@@ -102,7 +157,9 @@ fun DrawerScreen(
                             viewModel.setGestureApp(pickForGesture, app)
                             onGesturePicked()
                         } else {
-                            viewModel.launch(app)
+                            viewModel.launch(app) {
+                                Toast.makeText(context, frozenAppToastMessage, Toast.LENGTH_SHORT).show()
+                            }
                         }
                     }
                 },
@@ -123,6 +180,8 @@ fun DrawerScreen(
                 .padding(horizontal = 24.dp, vertical = 20.dp),
         )
 
+        val dimWorkApps = selectedProfile == DrawerProfile.WORK && workQuietModeEnabled
+
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             items(apps, key = { it.id }) { app: LaunchableApp ->
                 Box {
@@ -135,7 +194,9 @@ fun DrawerScreen(
                                         viewModel.setGestureApp(pickForGesture, app)
                                         onGesturePicked()
                                     } else {
-                                        viewModel.launch(app)
+                                        viewModel.launch(app) {
+                                            Toast.makeText(context, frozenAppToastMessage, Toast.LENGTH_SHORT).show()
+                                        }
                                     }
                                 },
                                 onLongClick = { if (pickForGesture == null) menuTarget = app },
@@ -143,7 +204,7 @@ fun DrawerScreen(
                             .padding(horizontal = 24.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(text = app.displayLabel, color = onBackground)
+                        Text(text = app.displayLabel, color = if (dimWorkApps) onBackground.copy(alpha = 0.35f) else onBackground)
                     }
 
                     DropdownMenu(
@@ -168,26 +229,6 @@ fun DrawerScreen(
                             text = { Text(stringResource(if (app.isHidden) R.string.unhide else R.string.hide)) },
                             onClick = {
                                 viewModel.setHidden(app, !app.isHidden)
-                                menuTarget = null
-                            },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(if (app.id in workAllowedIds) R.string.remove_from_work_mode else R.string.add_to_work_mode)) },
-                            onClick = {
-                                viewModel.toggleWorkAllowed(app)
-                                menuTarget = null
-                            },
-                        )
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    stringResource(
-                                        if (app.id in workFavoriteIds) R.string.unpin_from_work_mode_favorites else R.string.pin_to_work_mode_favorites,
-                                    ),
-                                )
-                            },
-                            onClick = {
-                                viewModel.toggleWorkFavorite(app)
                                 menuTarget = null
                             },
                         )

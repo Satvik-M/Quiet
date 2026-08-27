@@ -1,5 +1,6 @@
 package com.satvikm.quiet.ui.drawer
 
+import android.content.ActivityNotFoundException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.satvikm.quiet.data.apps.AppOverridesRepository
@@ -9,8 +10,7 @@ import com.satvikm.quiet.data.favorites.FavoritesRepository
 import com.satvikm.quiet.data.notifications.NotificationMuteRepository
 import com.satvikm.quiet.data.settings.GestureSettingsRepository
 import com.satvikm.quiet.data.settings.GestureSlot
-import com.satvikm.quiet.data.workprofile.WorkProfileMode
-import com.satvikm.quiet.data.workprofile.WorkProfileRepository
+import com.satvikm.quiet.data.workprofile.WorkProfileManager
 import com.satvikm.quiet.domain.model.LaunchableApp
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +23,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/** Which side of a real OS work-profile split the drawer is currently showing. */
+enum class DrawerProfile { PERSONAL, WORK }
+
 @HiltViewModel
 class DrawerViewModel @Inject constructor(
     private val appRepository: AppRepository,
@@ -31,7 +34,7 @@ class DrawerViewModel @Inject constructor(
     private val gestureSettingsRepository: GestureSettingsRepository,
     private val blocklistRepository: BlocklistRepository,
     private val notificationMuteRepository: NotificationMuteRepository,
-    private val workProfileRepository: WorkProfileRepository,
+    private val workProfileManager: WorkProfileManager,
 ) : ViewModel() {
 
     private val started = SharingStarted.WhileSubscribed(5_000)
@@ -39,17 +42,30 @@ class DrawerViewModel @Inject constructor(
     private val query = MutableStateFlow("")
     val queryText: StateFlow<String> = query.asStateFlow()
 
+    private val profile = MutableStateFlow(DrawerProfile.PERSONAL)
+    val selectedProfile: StateFlow<DrawerProfile> = profile.asStateFlow()
+
+    /**
+     * Whether a work profile exists at all. Computed once — provisioning a work profile isn't
+     * something that happens while this drawer is open, so this doesn't need to be reactive to
+     * a live broadcast.
+     */
+    val hasWorkProfile: StateFlow<Boolean> =
+        MutableStateFlow(workProfileManager.hasWorkProfile()).asStateFlow()
+
+    /**
+     * Reflects live quiet-mode state for the work profile. Unlike [hasWorkProfile], this *can*
+     * change while the drawer is open (e.g. the user paused/resumed it from this same screen, or
+     * from system Settings), so it's refreshed explicitly via [refreshWorkQuietMode] — called on
+     * `ON_RESUME` from the screen (see DrawerScreen) and right after a pause/resume attempt here
+     * — rather than wired to a live broadcast receiver, which isn't practical to verify without
+     * a physical device/CI harness.
+     */
+    private val _workQuietModeEnabled = MutableStateFlow(false)
+    val workQuietModeEnabled: StateFlow<Boolean> = _workQuietModeEnabled.asStateFlow()
+
     val favoriteIds: StateFlow<Set<String>> = favoritesRepository.favorites
         .combine(appRepository.apps) { favorites, _ -> favorites.map { it.appId }.toSet() }
-        .stateIn(viewModelScope, started, emptySet())
-
-    /** Work Mode's own favorites, separate from [favoriteIds] (Normal-mode favorites). Drives the "Pin/Unpin to Work Mode favorites" menu label regardless of which profile is currently active. */
-    val workFavoriteIds: StateFlow<Set<String>> = workProfileRepository.favorites
-        .map { favorites -> favorites.map { it.appId }.toSet() }
-        .stateIn(viewModelScope, started, emptySet())
-
-    /** Work Mode's curated allowlist membership, used for the "Add/Remove from Work Mode" menu label. */
-    val workAllowedIds: StateFlow<Set<String>> = workProfileRepository.allowedAppIds
         .stateIn(viewModelScope, started, emptySet())
 
     val blockedPackageNames: StateFlow<Set<String>> = blocklistRepository.blockedApps
@@ -60,32 +76,70 @@ class DrawerViewModel @Inject constructor(
         .map { muted -> muted.map { it.packageName }.toSet() }
         .stateIn(viewModelScope, started, emptySet())
 
+    init {
+        refreshWorkQuietMode()
+    }
+
     /**
-     * Ranked so prefix matches ("cal" -> Calculator, Calendar) beat substring matches. While
-     * Work Mode is active and unpaused, additionally restricted to the Work Mode allowlist —
-     * on top of, not instead of, the existing hidden-app filtering.
+     * Ranked so prefix matches ("cal" -> Calculator, Calendar) beat substring matches. Restricted
+     * to whichever OS user profile ([DrawerProfile.PERSONAL] or [DrawerProfile.WORK]) is
+     * currently selected — a straight profile-membership filter (every app under that
+     * [android.os.UserHandle], no curation), not any kind of allowlist.
      */
     val filteredApps: StateFlow<List<LaunchableApp>> = combine(
         appRepository.apps,
         query,
-        workProfileRepository.activeProfile,
-        workProfileRepository.paused,
-        workProfileRepository.allowedAppIds,
-    ) { apps, text, profile, paused, allowedIds ->
-        val restricted = if (profile == WorkProfileMode.WORK && !paused) {
-            apps.filter { it.id in allowedIds }
-        } else {
-            apps
+        profile,
+    ) { apps, text, selectedProfile ->
+        val handle = when (selectedProfile) {
+            DrawerProfile.PERSONAL -> workProfileManager.personalUserHandle()
+            DrawerProfile.WORK -> workProfileManager.workUserHandle()
         }
-        filterAndRank(restricted, text)
+        val inProfile = if (handle == null) emptyList() else apps.filter { it.userHandle == handle }
+        filterAndRank(inProfile, text)
     }.stateIn(viewModelScope, started, emptyList())
 
     fun onQueryChange(text: String) {
         query.value = text
     }
 
-    fun launch(app: LaunchableApp) {
-        appRepository.launch(app)
+    fun selectProfile(newProfile: DrawerProfile) {
+        profile.value = newProfile
+    }
+
+    fun refreshWorkQuietMode() {
+        val handle = workProfileManager.workUserHandle() ?: return
+        _workQuietModeEnabled.value = workProfileManager.isQuietModeEnabled(handle)
+    }
+
+    /** [onResult] reports whether the OS actually completed the action, so the caller can explain when it didn't (see [WorkProfileManager.resumeWorkApps]'s known API 28-30 limitation). */
+    fun togglePauseWorkApps(onResult: (Boolean) -> Unit) {
+        val handle = workProfileManager.workUserHandle() ?: return
+        viewModelScope.launch {
+            val succeeded = if (_workQuietModeEnabled.value) {
+                workProfileManager.resumeWorkApps(handle)
+            } else {
+                workProfileManager.pauseWorkApps(handle)
+            }
+            refreshWorkQuietMode()
+            onResult(succeeded)
+        }
+    }
+
+    /**
+     * [onFailure] is invoked if launching threw — e.g. tapping a Work-tab app while the work
+     * profile is frozen (paused). [AppRepository.launch] itself doesn't catch this (it's a
+     * thin wrapper over [android.content.pm.LauncherApps.startMainActivity]), so this is the
+     * first point in the call chain able to safely surface it instead of crashing.
+     */
+    fun launch(app: LaunchableApp, onFailure: () -> Unit = {}) {
+        try {
+            appRepository.launch(app)
+        } catch (e: SecurityException) {
+            onFailure()
+        } catch (e: ActivityNotFoundException) {
+            onFailure()
+        }
     }
 
     fun toggleFavorite(app: LaunchableApp) {
@@ -115,14 +169,6 @@ class DrawerViewModel @Inject constructor(
         viewModelScope.launch {
             if (muted) notificationMuteRepository.mute(app.packageName) else notificationMuteRepository.unmute(app.packageName)
         }
-    }
-
-    fun toggleWorkAllowed(app: LaunchableApp) {
-        viewModelScope.launch { workProfileRepository.setAllowed(app, app.id !in workAllowedIds.value) }
-    }
-
-    fun toggleWorkFavorite(app: LaunchableApp) {
-        viewModelScope.launch { workProfileRepository.toggleFavorite(app) }
     }
 
     private fun filterAndRank(apps: List<LaunchableApp>, query: String): List<LaunchableApp> {

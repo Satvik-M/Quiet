@@ -24,6 +24,12 @@
     <string name="choose_app_for_swipe_left">Choose app for swipe left</string>
     <string name="choose_app_for_swipe_right">Choose app for swipe right</string>
     <string name="search_hint">Search</string>
+    <string name="personal_tab">Personal</string>
+    <string name="work_tab">Work</string>
+    <string name="pause_work_apps">Pause work apps</string>
+    <string name="resume_work_apps">Resume work apps</string>
+    <string name="resume_work_apps_manual_toast">Couldn\'t resume automatically — check system Settings</string>
+    <string name="frozen_work_app_toast">This app is paused — resume work apps to open it</string>
     <string name="remove_from_favorites">Remove from favorites</string>
     <string name="pin_to_favorites">Pin to favorites</string>
     <string name="rename">Rename</string>
@@ -98,14 +104,6 @@
     <string name="focus_now">Focus now</string>
     <string name="end_focus_now">End focus</string>
     <string name="end_focus_now_locked">End focus (locked)</string>
-    <string name="switch_to_work_mode">Switch to Work Mode</string>
-    <string name="switch_to_normal_mode">Switch to Normal Mode</string>
-    <string name="pause_work_mode">Pause Work Mode</string>
-    <string name="resume_work_mode">Resume Work Mode</string>
-    <string name="add_to_work_mode">Add to Work Mode</string>
-    <string name="remove_from_work_mode">Remove from Work Mode</string>
-    <string name="pin_to_work_mode_favorites">Pin to Work Mode favorites</string>
-    <string name="unpin_from_work_mode_favorites">Unpin from Work Mode favorites</string>
     <string name="focus_duration_label">Duration</string>
     <string name="focus_until_i_stop_it">Until I stop it</string>
     <string name="focus_lock_label">Can\'t end early</string>

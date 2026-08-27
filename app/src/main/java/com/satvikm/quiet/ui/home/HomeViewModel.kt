@@ -12,26 +12,21 @@ import com.satvikm.quiet.data.settings.GestureSlot
 import com.satvikm.quiet.data.settings.HomeAlignment
 import com.satvikm.quiet.data.settings.SettingsRepository
 import com.satvikm.quiet.data.usage.UsageRepository
-import com.satvikm.quiet.data.workprofile.WorkProfileMode
-import com.satvikm.quiet.data.workprofile.WorkProfileRepository
 import com.satvikm.quiet.domain.model.LaunchableApp
 import com.satvikm.quiet.util.batteryLevelFlow
 import com.satvikm.quiet.util.currentTimeFlow
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.ZonedDateTime
 import javax.inject.Inject
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     @ApplicationContext context: Context,
@@ -42,33 +37,17 @@ class HomeViewModel @Inject constructor(
     private val usageRepository: UsageRepository,
     private val notificationMuteRepository: NotificationMuteRepository,
     private val focusScheduleRepository: FocusScheduleRepository,
-    private val workProfileRepository: WorkProfileRepository,
 ) : ViewModel() {
 
     private val started = SharingStarted.WhileSubscribed(5_000)
 
-    val activeProfile: StateFlow<WorkProfileMode> =
-        workProfileRepository.activeProfile.stateIn(viewModelScope, started, WorkProfileMode.NORMAL)
-    val paused: StateFlow<Boolean> = workProfileRepository.paused.stateIn(viewModelScope, started, false)
-
-    /** Favorites in the user's chosen order, cross-referenced against live app data. Draws from Work Mode's own favorites while Work Mode is active, else the Normal-mode favorites. */
-    val favorites: StateFlow<List<LaunchableApp>> = activeProfile.flatMapLatest { profile ->
-        when (profile) {
-            WorkProfileMode.NORMAL -> combine(
-                appRepository.apps,
-                favoritesRepository.favorites,
-            ) { allApps, favoriteEntities ->
-                val byId = allApps.associateBy { it.id }
-                favoriteEntities.mapNotNull { byId[it.appId] }
-            }
-            WorkProfileMode.WORK -> combine(
-                appRepository.apps,
-                workProfileRepository.favorites,
-            ) { allApps, favoriteEntities ->
-                val byId = allApps.associateBy { it.id }
-                favoriteEntities.mapNotNull { byId[it.appId] }
-            }
-        }
+    /** Favorites in the user's chosen order, cross-referenced against live app data. */
+    val favorites: StateFlow<List<LaunchableApp>> = combine(
+        appRepository.apps,
+        favoritesRepository.favorites,
+    ) { allApps, favoriteEntities ->
+        val byId = allApps.associateBy { it.id }
+        favoriteEntities.mapNotNull { byId[it.appId] }
     }.stateIn(viewModelScope, started, emptyList())
 
     val currentTime: StateFlow<ZonedDateTime> = currentTimeFlow(context).stateIn(
@@ -123,27 +102,7 @@ class HomeViewModel @Inject constructor(
     }
 
     fun reorderFavorites(appIdsInOrder: List<String>) {
-        viewModelScope.launch {
-            if (activeProfile.value == WorkProfileMode.WORK) {
-                workProfileRepository.reorderFavorites(appIdsInOrder)
-            } else {
-                favoritesRepository.reorder(appIdsInOrder)
-            }
-        }
-    }
-
-    /** Toggles between Normal and Work Mode. Instant — no dialog, no timer, no lock. */
-    fun switchProfile() {
-        viewModelScope.launch {
-            val next = if (activeProfile.value == WorkProfileMode.WORK) WorkProfileMode.NORMAL else WorkProfileMode.WORK
-            workProfileRepository.switchTo(next)
-        }
-    }
-
-    /** Only meaningful while Work Mode is active; ignored otherwise so Normal mode can never end up "paused". */
-    fun togglePause() {
-        if (activeProfile.value != WorkProfileMode.WORK) return
-        viewModelScope.launch { workProfileRepository.setPaused(!paused.value) }
+        viewModelScope.launch { favoritesRepository.reorder(appIdsInOrder) }
     }
 
     fun refreshScreenTime() {

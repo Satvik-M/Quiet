@@ -16,10 +16,6 @@ import com.satvikm.quiet.data.focus.FocusScheduleEntity
 import com.satvikm.quiet.data.notifications.MutedAppDao
 import com.satvikm.quiet.data.notifications.MutedAppEntity
 import com.satvikm.quiet.data.notifications.MutedNotificationEntity
-import com.satvikm.quiet.data.workprofile.WorkProfileAllowedAppDao
-import com.satvikm.quiet.data.workprofile.WorkProfileAllowedAppEntity
-import com.satvikm.quiet.data.workprofile.WorkProfileFavoriteDao
-import com.satvikm.quiet.data.workprofile.WorkProfileFavoriteEntity
 
 @Database(
     entities = [
@@ -33,10 +29,8 @@ import com.satvikm.quiet.data.workprofile.WorkProfileFavoriteEntity
         FocusScheduleEntity::class,
         FocusAutoMutedAppEntity::class,
         GraceEntity::class,
-        WorkProfileFavoriteEntity::class,
-        WorkProfileAllowedAppEntity::class,
     ],
-    version = 13,
+    version = 12,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -48,6 +42,4 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun focusScheduleDao(): FocusScheduleDao
     abstract fun focusAutoMuteDao(): FocusAutoMuteDao
     abstract fun graceDao(): GraceDao
-    abstract fun workProfileFavoriteDao(): WorkProfileFavoriteDao
-    abstract fun workProfileAllowedAppDao(): WorkProfileAllowedAppDao
 }
