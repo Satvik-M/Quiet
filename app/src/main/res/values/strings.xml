@@ -98,6 +98,14 @@
     <string name="focus_now">Focus now</string>
     <string name="end_focus_now">End focus</string>
     <string name="end_focus_now_locked">End focus (locked)</string>
+    <string name="switch_to_work_mode">Switch to Work Mode</string>
+    <string name="switch_to_normal_mode">Switch to Normal Mode</string>
+    <string name="pause_work_mode">Pause Work Mode</string>
+    <string name="resume_work_mode">Resume Work Mode</string>
+    <string name="add_to_work_mode">Add to Work Mode</string>
+    <string name="remove_from_work_mode">Remove from Work Mode</string>
+    <string name="pin_to_work_mode_favorites">Pin to Work Mode favorites</string>
+    <string name="unpin_from_work_mode_favorites">Unpin from Work Mode favorites</string>
     <string name="focus_duration_label">Duration</string>
     <string name="focus_until_i_stop_it">Until I stop it</string>
     <string name="focus_lock_label">Can\'t end early</string>

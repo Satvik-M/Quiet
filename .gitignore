@@ -11,6 +11,7 @@ captures/
 # IDE
 *.iml
 /.idea/
+/.vscode
 
 # Local machine config (SDK path, never share)
 local.properties

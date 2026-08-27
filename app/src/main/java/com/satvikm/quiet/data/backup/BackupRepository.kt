@@ -19,6 +19,9 @@ import com.satvikm.quiet.data.settings.FontSize
 import com.satvikm.quiet.data.settings.HomeAlignment
 import com.satvikm.quiet.data.settings.SettingsRepository
 import com.satvikm.quiet.data.settings.ThemeMode
+import com.satvikm.quiet.data.workprofile.WorkProfileAllowedAppEntity
+import com.satvikm.quiet.data.workprofile.WorkProfileFavoriteEntity
+import com.satvikm.quiet.data.workprofile.WorkProfileRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import org.json.JSONArray
@@ -30,9 +33,11 @@ import javax.inject.Singleton
 /**
  * Backs up and restores everything the user configured: DataStore preferences plus every
  * Room table that represents a deliberate choice (friction list, muted apps, focus schedules,
- * favorites, hidden/renamed apps). Deliberately excludes derived/transient state — the muted-
- * notification digest log, app-open/grace history, and the cached app list itself, which
- * rebuilds from the system on its own.
+ * favorites, hidden/renamed apps, Work Mode's favorites and allowlist). Deliberately excludes
+ * derived/transient state — the muted-notification digest log, app-open/grace history, the
+ * cached app list itself (which rebuilds from the system on its own), and — same policy as
+ * `manualFocusActive`/`manualFocusEndsAtMillis` — Work Mode's currently-active-profile and
+ * paused flags, which are instant runtime state, not a deliberate long-term choice.
  */
 @Singleton
 class BackupRepository @Inject constructor(
@@ -44,6 +49,7 @@ class BackupRepository @Inject constructor(
     private val favoritesRepository: FavoritesRepository,
     private val appOverridesRepository: AppOverridesRepository,
     private val notificationMuteRepository: NotificationMuteRepository,
+    private val workProfileRepository: WorkProfileRepository,
 ) {
     suspend fun exportTo(uri: Uri) {
         val bytes = buildBackupJson().toString(2).toByteArray()
@@ -114,6 +120,16 @@ class BackupRepository @Inject constructor(
             )
         }
 
+        val workProfileFavorites = JSONArray()
+        workProfileRepository.favorites.first().forEach { fav ->
+            workProfileFavorites.put(JSONObject().put("appId", fav.appId).put("position", fav.position))
+        }
+
+        val workProfileAllowedApps = JSONArray()
+        workProfileRepository.allowedApps.first().forEach { entry ->
+            workProfileAllowedApps.put(JSONObject().put("appId", entry.appId))
+        }
+
         return JSONObject()
             .put("version", 1)
             .put("settings", settings)
@@ -122,6 +138,8 @@ class BackupRepository @Inject constructor(
             .put("blockedApps", blockedApps)
             .put("mutedApps", mutedApps)
             .put("focusSchedules", focusSchedules)
+            .put("workProfileFavorites", workProfileFavorites)
+            .put("workProfileAllowedApps", workProfileAllowedApps)
     }
 
     private suspend fun applyBackupJson(root: JSONObject) {
@@ -182,6 +200,16 @@ class BackupRepository @Inject constructor(
                         daysMask = o.optInt("daysMask", 0b0011111),
                         enabled = o.optBoolean("enabled", true),
                     )
+                } ?: emptyList(),
+            )
+            workProfileRepository.replaceAllFavorites(
+                root.optJSONArray("workProfileFavorites")?.mapObjects { o ->
+                    WorkProfileFavoriteEntity(appId = o.getString("appId"), position = o.getInt("position"))
+                } ?: emptyList(),
+            )
+            workProfileRepository.replaceAllAllowedApps(
+                root.optJSONArray("workProfileAllowedApps")?.mapObjects { o ->
+                    WorkProfileAllowedAppEntity(appId = o.getString("appId"))
                 } ?: emptyList(),
             )
         }

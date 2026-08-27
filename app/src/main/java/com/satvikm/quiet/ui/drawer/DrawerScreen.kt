@@ -58,6 +58,8 @@ fun DrawerScreen(
     val query by viewModel.queryText.collectAsStateWithLifecycle()
     val apps by viewModel.filteredApps.collectAsStateWithLifecycle()
     val favoriteIds by viewModel.favoriteIds.collectAsStateWithLifecycle()
+    val workFavoriteIds by viewModel.workFavoriteIds.collectAsStateWithLifecycle()
+    val workAllowedIds by viewModel.workAllowedIds.collectAsStateWithLifecycle()
     val blockedPackageNames by viewModel.blockedPackageNames.collectAsStateWithLifecycle()
     val mutedPackageNames by viewModel.mutedPackageNames.collectAsStateWithLifecycle()
     val onBackground = MaterialTheme.colorScheme.onBackground
@@ -166,6 +168,26 @@ fun DrawerScreen(
                             text = { Text(stringResource(if (app.isHidden) R.string.unhide else R.string.hide)) },
                             onClick = {
                                 viewModel.setHidden(app, !app.isHidden)
+                                menuTarget = null
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(if (app.id in workAllowedIds) R.string.remove_from_work_mode else R.string.add_to_work_mode)) },
+                            onClick = {
+                                viewModel.toggleWorkAllowed(app)
+                                menuTarget = null
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    stringResource(
+                                        if (app.id in workFavoriteIds) R.string.unpin_from_work_mode_favorites else R.string.pin_to_work_mode_favorites,
+                                    ),
+                                )
+                            },
+                            onClick = {
+                                viewModel.toggleWorkFavorite(app)
                                 menuTarget = null
                             },
                         )

@@ -46,6 +46,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.satvikm.quiet.R
 import com.satvikm.quiet.data.settings.HomeAlignment
+import com.satvikm.quiet.data.workprofile.WorkProfileMode
 import com.satvikm.quiet.domain.model.LaunchableApp
 import com.satvikm.quiet.ui.common.SettingRow
 import com.satvikm.quiet.util.accessibilitySettingsIntent
@@ -83,6 +84,8 @@ fun HomeScreen(
     val manualFocusActive by viewModel.manualFocusActive.collectAsStateWithLifecycle()
     val manualFocusEndsAtMillis by viewModel.manualFocusEndsAtMillis.collectAsStateWithLifecycle()
     val manualFocusLocked by viewModel.manualFocusLocked.collectAsStateWithLifecycle()
+    val activeProfile by viewModel.activeProfile.collectAsStateWithLifecycle()
+    val workModePaused by viewModel.paused.collectAsStateWithLifecycle()
     var showFocusStartDialog by remember { mutableStateOf(false) }
 
     val timeFormatter = remember(context) {
@@ -242,6 +245,29 @@ fun HomeScreen(
                 }
                 .padding(vertical = 8.dp),
         )
+
+        Text(
+            text = if (activeProfile == WorkProfileMode.WORK) {
+                stringResource(R.string.switch_to_normal_mode)
+            } else {
+                stringResource(R.string.switch_to_work_mode)
+            },
+            color = onBackground.copy(alpha = 0.7f),
+            modifier = Modifier
+                .clickable { viewModel.switchProfile() }
+                .padding(vertical = 8.dp),
+        )
+
+        if (activeProfile == WorkProfileMode.WORK) {
+            Text(
+                text = if (workModePaused) stringResource(R.string.resume_work_mode) else stringResource(R.string.pause_work_mode),
+                color = onBackground.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .clickable { viewModel.togglePause() }
+                    .padding(top = 4.dp),
+            )
+        }
 
         if (!accessibilityEnabled) {
             Text(

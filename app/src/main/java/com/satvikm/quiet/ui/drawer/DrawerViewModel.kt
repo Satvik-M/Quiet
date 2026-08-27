@@ -9,6 +9,8 @@ import com.satvikm.quiet.data.favorites.FavoritesRepository
 import com.satvikm.quiet.data.notifications.NotificationMuteRepository
 import com.satvikm.quiet.data.settings.GestureSettingsRepository
 import com.satvikm.quiet.data.settings.GestureSlot
+import com.satvikm.quiet.data.workprofile.WorkProfileMode
+import com.satvikm.quiet.data.workprofile.WorkProfileRepository
 import com.satvikm.quiet.domain.model.LaunchableApp
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +31,7 @@ class DrawerViewModel @Inject constructor(
     private val gestureSettingsRepository: GestureSettingsRepository,
     private val blocklistRepository: BlocklistRepository,
     private val notificationMuteRepository: NotificationMuteRepository,
+    private val workProfileRepository: WorkProfileRepository,
 ) : ViewModel() {
 
     private val started = SharingStarted.WhileSubscribed(5_000)
@@ -40,6 +43,15 @@ class DrawerViewModel @Inject constructor(
         .combine(appRepository.apps) { favorites, _ -> favorites.map { it.appId }.toSet() }
         .stateIn(viewModelScope, started, emptySet())
 
+    /** Work Mode's own favorites, separate from [favoriteIds] (Normal-mode favorites). Drives the "Pin/Unpin to Work Mode favorites" menu label regardless of which profile is currently active. */
+    val workFavoriteIds: StateFlow<Set<String>> = workProfileRepository.favorites
+        .map { favorites -> favorites.map { it.appId }.toSet() }
+        .stateIn(viewModelScope, started, emptySet())
+
+    /** Work Mode's curated allowlist membership, used for the "Add/Remove from Work Mode" menu label. */
+    val workAllowedIds: StateFlow<Set<String>> = workProfileRepository.allowedAppIds
+        .stateIn(viewModelScope, started, emptySet())
+
     val blockedPackageNames: StateFlow<Set<String>> = blocklistRepository.blockedApps
         .map { blocked -> blocked.map { it.packageName }.toSet() }
         .stateIn(viewModelScope, started, emptySet())
@@ -48,10 +60,25 @@ class DrawerViewModel @Inject constructor(
         .map { muted -> muted.map { it.packageName }.toSet() }
         .stateIn(viewModelScope, started, emptySet())
 
-    /** Ranked so prefix matches ("cal" -> Calculator, Calendar) beat substring matches. */
-    val filteredApps: StateFlow<List<LaunchableApp>> = appRepository.apps
-        .combine(query) { apps, text -> filterAndRank(apps, text) }
-        .stateIn(viewModelScope, started, emptyList())
+    /**
+     * Ranked so prefix matches ("cal" -> Calculator, Calendar) beat substring matches. While
+     * Work Mode is active and unpaused, additionally restricted to the Work Mode allowlist —
+     * on top of, not instead of, the existing hidden-app filtering.
+     */
+    val filteredApps: StateFlow<List<LaunchableApp>> = combine(
+        appRepository.apps,
+        query,
+        workProfileRepository.activeProfile,
+        workProfileRepository.paused,
+        workProfileRepository.allowedAppIds,
+    ) { apps, text, profile, paused, allowedIds ->
+        val restricted = if (profile == WorkProfileMode.WORK && !paused) {
+            apps.filter { it.id in allowedIds }
+        } else {
+            apps
+        }
+        filterAndRank(restricted, text)
+    }.stateIn(viewModelScope, started, emptyList())
 
     fun onQueryChange(text: String) {
         query.value = text
@@ -88,6 +115,14 @@ class DrawerViewModel @Inject constructor(
         viewModelScope.launch {
             if (muted) notificationMuteRepository.mute(app.packageName) else notificationMuteRepository.unmute(app.packageName)
         }
+    }
+
+    fun toggleWorkAllowed(app: LaunchableApp) {
+        viewModelScope.launch { workProfileRepository.setAllowed(app, app.id !in workAllowedIds.value) }
+    }
+
+    fun toggleWorkFavorite(app: LaunchableApp) {
+        viewModelScope.launch { workProfileRepository.toggleFavorite(app) }
     }
 
     private fun filterAndRank(apps: List<LaunchableApp>, query: String): List<LaunchableApp> {
